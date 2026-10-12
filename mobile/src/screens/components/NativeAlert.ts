@@ -1,30 +1,27 @@
 /**
  * The app's React Native `Alert.alert(...)` dialogs.
  *
- * Not using WebdriverIO v10's `acceptDialog()`: it targets OS permission prompts (on iOS it
- * switches to SpringBoard) and silently succeeds when no dialog exists, which would hide failures.
- *
- * Android: webdriverio/appium-boilerplate uses `com.wdiodemoapp:id/alert_title` for the v2 (Expo)
- * build, but the v2.2.0 APK's resources contain both `alert_title` and `alertTitle`, so either is
- * accepted. The message is `android:id/message`; button labels are rendered in upper case.
+ * WebdriverIO 10's `acceptDialog()` is not used here. On iOS it switches to SpringBoard (it is
+ * built for system permission prompts), and on both platforms it returns silently when no dialog
+ * is present. These tests need to assert that a specific alert appeared, with specific text.
  */
-const ANDROID_TITLE_IDS = [
-    'com.wdiodemoapp:id/alert_title',
-    'com.wdiodemoapp:id/alertTitle',
-    'android:id/alertTitle',
-];
-
 const SELECTORS = {
     ANDROID: {
-        TITLE: `//android.widget.TextView[${ANDROID_TITLE_IDS.map((id) => `@resource-id="${id}"`).join(' or ')}]`,
+        // With the app's AppCompat theme, React Native's AlertFragment renders its own title view
+        // with this id (confirmed in the v2.2.0 APK and in webdriverio/appium-boilerplate).
+        TITLE: '//android.widget.TextView[@resource-id="com.wdiodemoapp:id/alert_title"]',
         MESSAGE: '//android.widget.TextView[@resource-id="android:id/message"]',
-        BUTTON: (text: string) => `//android.widget.Button[@text="${text.toUpperCase()}"]`,
+        // Material buttons may render their label in upper case, so accept either form.
+        BUTTON: (text: string) => `//android.widget.Button[@text="${text}" or @text="${text.toUpperCase()}"]`,
     },
     IOS: {
         ALERT: "-ios predicate string:type == 'XCUIElementTypeAlert'",
         BUTTON: (text: string) => `~${text}`,
     },
 } as const;
+
+/** waitUntil reports a timeout with exactly this message; any other error is a real failure. */
+const NOT_SHOWN = 'native alert did not appear';
 
 export interface AlertContent {
     title: string;
@@ -36,21 +33,26 @@ class NativeAlert {
         return $(driver.isAndroid ? SELECTORS.ANDROID.TITLE : SELECTORS.IOS.ALERT);
     }
 
-    /** The login/sign-up form simulates a 1.5 s API call before alerting, so allow headroom. */
+    /** The login form fakes a 1.5 s API call before alerting, so the default leaves headroom. */
     async waitForIsShown(isShown = true, timeout = 10_000): Promise<void> {
         await this.anchor.waitForExist({ timeout, reverse: !isShown });
     }
 
     /**
-     * Resolves true if an alert appears within `withinMs`. Used by negative tests to prove
-     * no success alert follows a rejected submission (the app would show one after ~1.5 s).
+     * For negative tests: true if an alert appears within `withinMs`, false if it does not.
+     * Only the wait's own timeout means "no alert". Any other error (lost session, bad selector,
+     * strict-selector violation) is rethrown, so a broken driver can never pass a negative test.
      */
     async appearsWithin(withinMs: number): Promise<boolean> {
         try {
-            await this.anchor.waitForExist({ timeout: withinMs });
+            await browser.waitUntil(() => this.anchor.isExisting(), {
+                timeout: withinMs,
+                timeoutMsg: NOT_SHOWN,
+            });
             return true;
-        } catch {
-            return false;
+        } catch (error) {
+            if (error instanceof Error && error.message === NOT_SHOWN) return false;
+            throw error;
         }
     }
 
@@ -61,7 +63,7 @@ class NativeAlert {
                 message: await $(SELECTORS.ANDROID.MESSAGE).getText(),
             };
         }
-        // iOS exposes "Title\nMessage" as the alert text.
+        // iOS (to be confirmed when iOS is added): WebDriverAgent returns "Title\nMessage".
         const [title = '', ...rest] = (await driver.getAlertText()).split('\n');
         return { title, message: rest.join('\n') };
     }

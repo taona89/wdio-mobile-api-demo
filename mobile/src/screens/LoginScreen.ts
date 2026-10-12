@@ -1,17 +1,23 @@
 import AppScreen from './AppScreen.js';
+import TabBar from './components/TabBar.js';
 import { byId, byText } from '../helpers/selectors.js';
 import type { Credentials } from '../data/users.js';
 
-/** Login / Sign up form (src/components/LoginForm.tsx in the app). */
+export type LoginMode = 'login' | 'signup';
+
+/**
+ * Login / Sign up form (src/components/LoginForm.tsx).
+ * Button ids follow the app's Button component rule: `button-${testID || text}`.
+ */
 class LoginScreen extends AppScreen {
     constructor() {
         super('Login-screen');
     }
 
-    private get loginTab() {
+    private get loginModeTab() {
         return $(byId('button-login-container'));
     }
-    private get signUpTab() {
+    private get signUpModeTab() {
         return $(byId('button-sign-up-container'));
     }
     private get emailInput() {
@@ -20,6 +26,7 @@ class LoginScreen extends AppScreen {
     private get passwordInput() {
         return $(byId('input-password'));
     }
+    /** Only rendered in sign-up mode, which makes it the signal for which mode is active. */
     private get repeatPasswordInput() {
         return $(byId('input-repeat-password'));
     }
@@ -30,14 +37,19 @@ class LoginScreen extends AppScreen {
         return $(byId('button-SIGN UP'));
     }
 
-    async switchToLogin(): Promise<void> {
-        await this.loginTab.click();
-        await this.repeatPasswordInput.waitForExist({ reverse: true });
-    }
-
-    async switchToSignUp(): Promise<void> {
-        await this.signUpTab.click();
-        await this.repeatPasswordInput.waitForDisplayed();
+    /** Navigate from anywhere in the app to the form, in the requested mode. */
+    async open(mode: LoginMode): Promise<void> {
+        await TabBar.waitForIsShown();
+        await TabBar.open('Login');
+        await this.waitForIsShown();
+        // Login is the default mode, but select it explicitly so the test never depends on that.
+        if (mode === 'login') {
+            await this.loginModeTab.click();
+            await this.repeatPasswordInput.waitForExist({ reverse: true });
+        } else {
+            await this.signUpModeTab.click();
+            await this.repeatPasswordInput.waitForDisplayed();
+        }
     }
 
     async login({ email, password }: Credentials): Promise<void> {
@@ -53,26 +65,35 @@ class LoginScreen extends AppScreen {
         await this.submit(this.signUpButton);
     }
 
-    /** Validation messages have no id, so they are located by their exact text. */
+    /** Validation messages have no id; each is rendered once, under its own input. */
     validationMessage(text: string): ChainablePromiseElement {
         return $(byText(text));
     }
 
     private async submit(button: ChainablePromiseElement): Promise<void> {
         await this.hideKeyboard();
-        // On small screens the button can sit below the fold once the keyboard has been open.
+        // On small screens the button can sit below the fold after the keyboard has been open.
         await button.scrollIntoView({ scrollableElement: await this.screen });
         await button.click();
     }
 
+    /**
+     * Hiding the keyboard resizes the layout (adjustResize, KeyboardAvoidingView, and the tab bar
+     * reappearing), so wait until it has really gone before locating the submit button.
+     */
     private async hideKeyboard(): Promise<void> {
         if (!(await driver.isKeyboardShown())) return;
         if (driver.isAndroid) {
             await driver.hideKeyboard();
         } else {
-            // driver.hideKeyboard() is unreliable on iOS (XCTest limitation): tap a neutral area instead.
-            await this.screen.click();
+            // driver.hideKeyboard() is unreliable on iOS (an XCTest limitation), so tap the form's
+            // heading: a non-interactive element, unlike the screen centre, which may be an input.
+            await $(byText('Login / Sign up Form')).click();
         }
+        await browser.waitUntil(async () => !(await driver.isKeyboardShown()), {
+            timeout: 5_000,
+            timeoutMsg: 'keyboard is still shown 5 s after trying to hide it',
+        });
     }
 }
 

@@ -1,32 +1,31 @@
 /**
  * Test data for the Login / Sign up form.
  *
- * The demo app has no backend: it accepts any email matching its regex and any
- * password of 8+ characters (verified in src/components/LoginForm.tsx of the app).
- * Unique emails per run still matter so the tests stay valid if a backend is added.
+ * The app has no backend. LoginForm.tsx only checks that the email matches its regex and the
+ * password has at least 8 characters; any input that passes gets the success alert.
  */
 export interface Credentials {
     email: string;
     password: string;
 }
 
-const uniqueSuffix = (): string => `${Date.now()}${Math.floor(Math.random() * 1_000)}`;
+/** The app's only password rule. */
+export const MIN_PASSWORD_LENGTH = 8;
 
+/** Unique per call, so sign-up data never collides between runs. */
 export const newUser = (): Credentials => ({
-    email: `qa.user.${uniqueSuffix()}@example.com`,
+    email: `qa.user.${Date.now()}${Math.floor(Math.random() * 1_000)}@example.com`,
     password: 'Str0ngPass!',
 });
 
-export const existingUser: Credentials = {
-    email: 'existing.user@example.com',
+/** Credentials that satisfy the form's rules; there is no stored account behind them. */
+export const validUser: Credentials = {
+    email: 'qa.login@example.com',
     password: 'Str0ngPass!',
 };
 
-/** Exact messages rendered by the app; asserting full strings catches copy regressions. */
-export const MESSAGES = {
-    loginSuccess: { title: 'Success', message: 'You are logged in!' },
-    signupSuccess: { title: 'Signed Up!', message: 'You successfully signed up!' },
-    invalidEmail: 'Please enter a valid email address',
-    shortPassword: 'Please enter at least 8 characters',
-    passwordMismatch: 'Please enter the same password',
+/** Boundary values around the 8-character rule. */
+export const PASSWORDS = {
+    oneTooShort: 'a'.repeat(MIN_PASSWORD_LENGTH - 1),
+    exactlyMinimum: 'Wrong123',
 } as const;

@@ -1,6 +1,9 @@
 import { byId } from '../helpers/selectors.js';
 
-/** Base class: every screen in the demo app exposes a `<Name>-screen` accessibility id. */
+/**
+ * Base for all screen objects. Every screen in the app's root view carries a
+ * `<Name>-screen` accessibility id, which is the reliable signal that the screen has rendered.
+ */
 export default abstract class AppScreen {
     protected constructor(private readonly screenId: string) {}
 

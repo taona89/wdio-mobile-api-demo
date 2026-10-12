@@ -1,62 +1,81 @@
-import { mkdirSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { ROOT_DIR } from './app.js';
 
-const ARTIFACTS_DIR = join(process.cwd(), 'mobile', 'artifacts');
+dotenv.config({ path: join(ROOT_DIR, '.env'), quiet: true });
+
+const ARTIFACTS_DIR = join(ROOT_DIR, 'mobile', 'artifacts');
 const SCREENSHOTS_DIR = join(ARTIFACTS_DIR, 'screenshots');
+const LOGS_DIR = join(ARTIFACTS_DIR, 'logs');
+
+/** Clear the previous run's evidence so a stale FAIL screenshot never sits next to a new PASS. */
+export function prepareArtifactsDir(): void {
+    rmSync(ARTIFACTS_DIR, { recursive: true, force: true });
+    mkdirSync(SCREENSHOTS_DIR, { recursive: true });
+    mkdirSync(LOGS_DIR, { recursive: true });
+}
+
+const fileSafe = (text: string): string => text.replace(/[^a-z0-9]+/gi, '_').slice(0, 120);
+
+/** Screenshot plus the native view hierarchy: the XML is what you need to debug a failing locator. */
+async function captureFailure(name: string): Promise<void> {
+    await driver.saveScreenshot(join(SCREENSHOTS_DIR, `FAIL__${name}.png`));
+    writeFileSync(join(SCREENSHOTS_DIR, `FAIL__${name}.xml`), await driver.getPageSource());
+}
 
 /**
- * Platform-agnostic configuration. Platform configs (wdio.android.conf.ts, later
- * wdio.ios.conf.ts) spread this and only add capabilities, so test logic is shared.
+ * Platform-agnostic configuration. Platform configs (wdio.android.conf.ts; iOS on Day 2) spread
+ * this and add only capabilities, so all test logic is shared between platforms.
  */
 export const config: Omit<WebdriverIO.Config, 'capabilities'> = {
     runner: 'local',
+    // Resolved relative to this config file.
     specs: ['../specs/**/*.spec.ts'],
+    // One physical device, so one session at a time.
     maxInstances: 1,
     logLevel: 'warn',
-    outputDir: join(ARTIFACTS_DIR, 'logs'),
-    bail: 0,
+    // WebdriverIO worker logs, and the Appium service writes wdio-appium.log here too.
+    outputDir: LOGS_DIR,
     waitforTimeout: 15_000,
-    connectionRetryTimeout: 120_000,
-    connectionRetryCount: 2,
-    specFileRetries: 0,
+    // Session creation includes installing a ~120 MB APK over USB on the first run.
+    connectionRetryTimeout: 300_000,
+    connectionRetryCount: 1,
 
-    services: [
-        [
-            'appium',
-            {
-                // Appium and the UiAutomator2 driver are project devDependencies, no global install needed.
-                args: {
-                    log: join(ARTIFACTS_DIR, 'logs', 'appium.log'),
-                },
-            },
-        ],
-    ],
+    // Starts the project-local Appium 3 server (with the UiAutomator2 driver from devDependencies).
+    services: ['appium'],
 
     framework: 'mocha',
     mochaOpts: {
         ui: 'bdd',
+        // Per test, generous because beforeEach relaunches the app on a real device.
         timeout: 120_000,
-        retries: 0,
     },
 
     reporters: [['spec', { showPreface: false }]],
 
-    onPrepare() {
-        mkdirSync(SCREENSHOTS_DIR, { recursive: true });
-    },
+    onPrepare: prepareArtifactsDir,
 
     async before() {
         if (driver.isAndroid) {
-            // UiAutomator2 waits this long for each element lookup; WDIO's own waits handle the rest.
+            // Caps how long UiAutomator2 itself waits for `android=` (UiSelector) lookups, which byText()
+            // uses; WebdriverIO's waitFor* commands own all other waiting.
             await driver.updateSettings({ waitForSelectorTimeout: 3_000 });
         }
     },
 
-    /** Evidence: screenshot every test (pass or fail), named by result. */
+    /** A hook failure (e.g. beforeEach navigation) never reaches afterTest, so capture it here. */
+    async afterHook(test, _context, { passed }, hookName) {
+        if (!passed) await captureFailure(fileSafe(`${hookName} ${test.parent ?? ''} ${test.title ?? ''}`));
+    },
+
+    /** Evidence for the submission: a screenshot of every test's end state, prefixed by result. */
     async afterTest(test, _context, { passed }) {
-        const safeTitle = `${test.parent} ${test.title}`.replace(/[^a-z0-9]+/gi, '_').slice(0, 120);
-        const status = passed ? 'PASS' : 'FAIL';
-        await driver.saveScreenshot(join(SCREENSHOTS_DIR, `${status}__${safeTitle}.png`));
+        const name = fileSafe(`${test.parent} ${test.title}`);
+        if (passed) {
+            await driver.saveScreenshot(join(SCREENSHOTS_DIR, `PASS__${name}.png`));
+        } else {
+            await captureFailure(name);
+        }
     },
 };
