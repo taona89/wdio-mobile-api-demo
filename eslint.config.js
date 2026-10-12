@@ -1,7 +1,10 @@
 import js from '@eslint/js';
+import { defineConfig } from 'eslint/config';
+import mocha from 'eslint-plugin-mocha';
+import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
-export default tseslint.config(
+export default defineConfig(
     {
         ignores: [
             'node_modules/',
@@ -12,10 +15,16 @@ export default tseslint.config(
         ],
     },
     js.configs.recommended,
-    ...tseslint.configs.recommended,
     {
         files: ['**/*.ts'],
+        extends: [tseslint.configs.recommendedTypeChecked],
+        languageOptions: {
+            // Each file is checked against its nearest tsconfig (mobile/ or api/).
+            parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
+        },
         rules: {
+            // The classic WebdriverIO bug: a command without `await` races the next step.
+            '@typescript-eslint/no-floating-promises': 'error',
             '@typescript-eslint/no-unused-vars': [
                 'error',
                 { argsIgnorePattern: '^_', varsIgnorePattern: '^_' },
@@ -23,22 +32,26 @@ export default tseslint.config(
         },
     },
     {
-        // WebdriverIO injects driver/$/expect as globals in the mobile project.
+        // WebdriverIO injects driver, browser, $ and $$ as globals; Mocha provides describe/it.
         files: ['mobile/**/*.ts'],
+        plugins: { mocha },
         languageOptions: {
             globals: {
+                ...globals.mocha,
                 driver: 'readonly',
                 browser: 'readonly',
                 $: 'readonly',
                 $$: 'readonly',
-                expect: 'readonly',
             },
+        },
+        rules: {
+            'mocha/no-exclusive-tests': 'error',
+            'mocha/no-identical-title': 'error',
+            'mocha/no-pending-tests': 'warn',
         },
     },
     {
-        files: ['scripts/**/*.mjs'],
-        languageOptions: {
-            globals: { console: 'readonly', process: 'readonly', fetch: 'readonly' },
-        },
+        files: ['**/*.{js,mjs}'],
+        languageOptions: { globals: globals.node },
     },
 );

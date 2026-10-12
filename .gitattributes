@@ -1,0 +1,4 @@
+# Normalise line endings so `npm run format:check` passes on Windows checkouts too.
+* text=auto eol=lf
+*.apk binary
+*.png binary
