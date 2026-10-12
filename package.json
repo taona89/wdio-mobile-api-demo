@@ -1,0 +1,41 @@
+{
+    "name": "wdio-appium-api-assessment",
+    "version": "1.0.0",
+    "private": true,
+    "description": "Mobile automation (WebdriverIO + Appium) for the WebdriverIO Native Demo App and API tests (Playwright) for Restful Booker.",
+    "type": "module",
+    "engines": {
+        "node": ">=22.19.0"
+    },
+    "scripts": {
+        "app:download": "node scripts/download-app.mjs",
+        "appium:doctor": "appium driver doctor uiautomator2",
+        "test:android": "wdio run mobile/config/wdio.android.conf.ts",
+        "test:api": "playwright test --config api/playwright.config.ts",
+        "test:api:report": "playwright show-report api/playwright-report",
+        "typecheck": "tsc --noEmit -p mobile/tsconfig.json && tsc --noEmit -p api/tsconfig.json",
+        "lint": "eslint .",
+        "format": "prettier --write ."
+    },
+    "devDependencies": {
+        "@eslint/js": "^10.0.0",
+        "@playwright/test": "^1.64.0",
+        "@types/mocha": "^10.0.10",
+        "@types/node": "^22.19.0",
+        "@wdio/appium-service": "^10.0.2",
+        "@wdio/cli": "^10.0.2",
+        "@wdio/globals": "^10.0.2",
+        "@wdio/local-runner": "^10.0.2",
+        "@wdio/mocha-framework": "^10.0.1",
+        "@wdio/spec-reporter": "^10.0.1",
+        "appium": "^3.8.0",
+        "appium-uiautomator2-driver": "^8.7.0",
+        "dotenv": "^18.0.7",
+        "eslint": "^10.12.0",
+        "expect-webdriverio": "^8.0.0",
+        "prettier": "^3.6.0",
+        "typescript": "~6.0.3",
+        "typescript-eslint": "^8.71.1",
+        "zod": "^4.6.6"
+    }
+}

@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "target": "ES2023",
+        "module": "NodeNext",
+        "moduleResolution": "NodeNext",
+        "strict": true,
+        "noUncheckedIndexedAccess": true,
+        "noEmit": true,
+        "skipLibCheck": true,
+        "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework", "expect-webdriverio"]
+    },
+    "include": ["config/**/*.ts", "src/**/*.ts", "specs/**/*.ts"]
+}

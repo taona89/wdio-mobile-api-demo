@@ -1,0 +1,12 @@
+node_modules/
+.env
+
+# Downloaded app binaries (~120 MB) – fetch with `npm run app:download`
+apps/
+
+# Test output
+mobile/artifacts/
+api/playwright-report/
+api/test-results/
+
+.DS_Store
