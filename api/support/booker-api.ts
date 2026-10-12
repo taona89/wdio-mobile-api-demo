@@ -1,4 +1,5 @@
 import type { APIRequestContext, APIResponse } from '@playwright/test';
+import { ADMIN } from './env.js';
 import type { Booking } from './schemas.js';
 
 export interface Credentials {
@@ -6,15 +7,9 @@ export interface Credentials {
     password: string;
 }
 
-/** Documented default admin credentials for Restful Booker. */
-export const ADMIN: Credentials = {
-    username: process.env.BOOKER_USERNAME ?? 'admin',
-    password: process.env.BOOKER_PASSWORD ?? 'password123',
-};
-
 /**
- * Thin client over Playwright's built-in APIRequestContext. Keeps endpoints and headers in
- * one place; tests own the assertions.
+ * Thin client over Playwright's built-in APIRequestContext. It owns endpoints and headers;
+ * tests own every assertion, so a failing test always points at the behaviour, not the client.
  */
 export class BookerApi {
     constructor(private readonly request: APIRequestContext) {}
@@ -23,7 +18,8 @@ export class BookerApi {
         return this.request.post('/auth', { data: credentials });
     }
 
-    createBooking(booking: Booking): Promise<APIResponse> {
+    /** Accepts any body so negative tests can send invalid payloads. */
+    createBooking(booking: Partial<Booking> | Record<string, unknown>): Promise<APIResponse> {
         return this.request.post('/booking', { data: booking });
     }
 
@@ -31,7 +27,19 @@ export class BookerApi {
         return this.request.get(`/booking/${id}`);
     }
 
-    deleteBooking(id: number, token: string): Promise<APIResponse> {
-        return this.request.delete(`/booking/${id}`, { headers: { Cookie: `token=${token}` } });
+    /** Authorised with a token from /auth, sent as the `token` cookie. Omit it to call unauthenticated. */
+    deleteBooking(id: number, token?: string): Promise<APIResponse> {
+        return this.request.delete(`/booking/${id}`, {
+            headers: token ? { Cookie: `token=${token}` } : {},
+        });
+    }
+
+    /**
+     * Basic auth is the API's other documented way to authorise. Cleanup uses it so tidying up
+     * never depends on /auth, which is itself under test.
+     */
+    deleteBookingAsAdmin(id: number): Promise<APIResponse> {
+        const basic = Buffer.from(`${ADMIN.username}:${ADMIN.password}`).toString('base64');
+        return this.request.delete(`/booking/${id}`, { headers: { Authorization: `Basic ${basic}` } });
     }
 }

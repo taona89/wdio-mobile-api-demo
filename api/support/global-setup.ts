@@ -2,8 +2,8 @@ import { request } from '@playwright/test';
 import { API_BASE_URL } from './env.js';
 
 /**
- * Wake the Heroku dyno before the suite starts so the first test is not penalised by a
- * cold start. GET /ping returns 201 when the API is up (routes/index.js in restful-booker).
+ * Wake the Heroku dyno before the suite starts, so the first test isn't penalised by a cold
+ * start, and stop early with one clear error if the API is down. GET /ping answers 201 when healthy.
  */
 export default async function globalSetup(): Promise<void> {
     const context = await request.newContext({ baseURL: API_BASE_URL });

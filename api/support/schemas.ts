@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-/** Response contracts for the endpoints under test, validated on every call. */
+/**
+ * Response contracts, taken from restful-booker's routes/index.js and helpers/parser.js.
+ * `strictObject` rejects unknown keys, so an unexpected field in a response fails the test.
+ */
 
 export const AuthSuccessSchema = z.strictObject({
     token: z.string().min(1),
@@ -30,4 +33,3 @@ export const CreatedBookingSchema = z.strictObject({
 });
 
 export type Booking = z.infer<typeof BookingSchema>;
-export type CreatedBooking = z.infer<typeof CreatedBookingSchema>;

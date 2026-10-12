@@ -1,42 +1,54 @@
 import { test, expect } from '../support/fixtures.js';
+import { expectJson } from '../support/assertions.js';
 import { buildBooking } from '../support/booking-builder.js';
-import { BookingSchema, CreatedBookingSchema } from '../support/schemas.js';
+import { BookingSchema, CreatedBookingSchema, type Booking } from '../support/schemas.js';
 
-test.describe('POST /booking – create booking', () => {
-    test('creates a booking whose data matches the request', async ({ api, trackBooking }) => {
+/** Payload variants covering the optional field and both values of the boolean. */
+const createCases: { name: string; payload: () => Partial<Booking> }[] = [
+    { name: 'a full payload', payload: () => buildBooking() },
+    {
+        name: 'a payload without the optional additionalneeds field',
+        payload: () => {
+            const { additionalneeds: _omitted, ...rest } = buildBooking();
+            return rest;
+        },
+    },
+    { name: 'a payload with the deposit not paid', payload: () => buildBooking({ depositpaid: false }) },
+];
+
+test.describe('POST /booking - create booking', () => {
+    for (const { name, payload: makePayload } of createCases) {
+        test(`returns the created booking matching the request, for ${name}`, async ({ bookings }) => {
+            const payload = makePayload();
+
+            const { response } = await bookings.create(payload);
+
+            const created = CreatedBookingSchema.parse(await expectJson(response, 200));
+            expect(created.booking).toEqual(payload);
+        });
+    }
+
+    test('persists the booking so it can be read back by id', async ({ api, bookings }) => {
         const payload = buildBooking();
+        const { response } = await bookings.create(payload);
+        const { bookingid } = CreatedBookingSchema.parse(await expectJson(response, 200));
 
-        const response = await api.createBooking(payload);
+        const stored = BookingSchema.parse(await expectJson(await api.getBooking(bookingid), 200));
 
-        expect(response.status()).toBe(200);
-        const body = CreatedBookingSchema.parse(await response.json());
-        trackBooking(body.bookingid);
-
-        expect(body.bookingid).toBeGreaterThan(0);
-        expect(body.booking).toEqual(payload);
+        // A GET equal to the request proves the data was stored, not just echoed back.
+        expect(stored).toEqual(payload);
     });
 
-    test('creates a booking without the optional additionalneeds field', async ({ api, trackBooking }) => {
-        const { additionalneeds: _omitted, ...payload } = buildBooking();
+    test('rejects a booking that is missing a required field', async ({ bookings }) => {
+        const { lastname: _missing, ...payload } = buildBooking();
 
-        const response = await api.createBooking(payload);
+        const { response, body } = await bookings.create(payload);
 
-        expect(response.status()).toBe(200);
-        const body = CreatedBookingSchema.parse(await response.json());
-        trackBooking(body.bookingid);
-
-        expect(body.booking).toEqual(payload);
-        expect(body.booking).not.toHaveProperty('additionalneeds');
-    });
-
-    test('persists the booking so it can be read back by id', async ({ api, trackBooking }) => {
-        const payload = buildBooking();
-        const created = CreatedBookingSchema.parse(await (await api.createBooking(payload)).json());
-        trackBooking(created.bookingid);
-
-        const response = await api.getBooking(created.bookingid);
-
-        expect(response.status()).toBe(200);
-        expect(BookingSchema.parse(await response.json())).toEqual(payload);
+        test.info().annotations.push({
+            type: 'observation',
+            description: `Missing required field answered with HTTP ${response.status()}; a 400 would be expected.`,
+        });
+        expect(response.ok(), 'request should be rejected').toBe(false);
+        expect(body, 'no booking should be created').toBeNull();
     });
 });
