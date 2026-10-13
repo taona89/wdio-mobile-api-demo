@@ -37,10 +37,6 @@ class LoginPage extends AppPage {
     private get signUpButton() {
         return $(byId('button-SIGN UP'));
     }
-    /** The form's heading. No id, so text — but it is only ever tapped, never asserted on. */
-    private get heading() {
-        return $(byText('Login / Sign up Form'));
-    }
 
     /** Navigate from anywhere in the app to the form, in the requested mode. */
     async open(mode: LoginMode): Promise<void> {
@@ -79,7 +75,14 @@ class LoginPage extends AppPage {
     }
 
     private async submit(button: ChainablePromiseElement): Promise<void> {
-        await hideKeyboard(this.heading);
+        // Android only. On iOS the keyboard stays up, because nothing on this screen dismisses it
+        // without side effects: the keyboard's Done key submits the form (`onSubmitEditing`), and
+        // the heading - the one inert element - is pushed under the status bar while the keyboard
+        // is open. It does not need to go: the form sits in a KeyboardAvoidingView, so the button
+        // and the validation messages stay visible above it. Android's argument is ignored.
+        if (driver.isAndroid) {
+            await hideKeyboard(button);
+        }
         // On small screens the button can sit below the fold after the keyboard has been open.
         await this.scrollTo(button);
         await button.click();

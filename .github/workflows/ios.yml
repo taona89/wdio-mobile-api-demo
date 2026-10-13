@@ -71,8 +71,31 @@ jobs:
                   PY
                   cat "$GITHUB_ENV"
 
-            - name: Boot the simulator
+            # iOS offers an "Automatic Strong Password" for the sign-up form's password fields. It
+            # replaces the keyboard and discards what the test types, so the form is submitted
+            # with empty passwords. The setting only exists once the simulator has booted, and is
+            # only read at boot, hence boot, shut down, patch, boot again.
+            - name: Boot the simulator with password AutoFill turned off
               run: |
+                  PROFILES="$HOME/Library/Developer/CoreSimulator/Devices/$IOS_UDID/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles"
+                  LOG="mobile/artifacts/logs/simulator-setup.log"
+                  mkdir -p "$(dirname "$LOG")"
+
+                  xcrun simctl boot "$IOS_UDID"
+                  xcrun simctl bootstatus "$IOS_UDID" -b
+                  xcrun simctl shutdown "$IOS_UDID"
+
+                  for file in UserSettings.plist EffectiveUserSettings.plist PublicInfo/PublicEffectiveUserSettings.plist; do
+                      if plutil -replace restrictedBool.allowPasswordAutoFill.value -bool NO "$PROFILES/$file" >> "$LOG" 2>&1 \
+                          || /usr/libexec/PlistBuddy -c "Add :restrictedBool:allowPasswordAutoFill:value bool false" "$PROFILES/$file" >> "$LOG" 2>&1; then
+                          echo "patched $file" >> "$LOG"
+                      else
+                          echo "could not patch $file" >> "$LOG"
+                      fi
+                  done
+                  ls -la "$PROFILES" "$PROFILES/PublicInfo" >> "$LOG" 2>&1 || true
+                  cat "$LOG"
+
                   xcrun simctl boot "$IOS_UDID"
                   xcrun simctl bootstatus "$IOS_UDID" -b
 

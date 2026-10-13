@@ -34,8 +34,6 @@ const escapeQuoted = (text: string): string => text.replace(/\\/g, '\\\\').repla
  *   2. Carousel card titles, and the copy hidden below the fold on the Swipe screen.
  *      `SliderEntry` labels every card `card`, so the six cards are indistinguishable by id; the
  *      title is the only per-card signal.
- *   3. The Login form's heading, which `login.page.ts` taps to dismiss the keyboard on iOS. It is
- *      never asserted on - it just needs to be an inert, non-input place to tap.
  *
  * All of these are still platform-aware, so they run on Android and iOS unchanged. Every string
  * asserted through byText is checked against the app's known copy first, so a typo fails fast

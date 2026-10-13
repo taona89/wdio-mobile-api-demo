@@ -7,7 +7,7 @@ Automated tests for the [WebdriverIO Native Demo App](https://github.com/webdriv
 | Mobile | WebdriverIO 10, Appium 3, Cucumber (Gherkin), UiAutomator2 / XCUITest, TypeScript | Android physical device; iOS config included |
 | API    | Playwright Test (`APIRequestContext`), zod schemas, TypeScript                    | `restful-booker.herokuapp.com`               |
 
-The mobile suite is written in BDD: business-readable `.feature` files, thin step definitions, and page objects that locate elements by **accessibility id**, so one set of scenarios drives Android and iOS. No feature or step file mentions a platform; the five places that cannot use an accessibility id are listed below.
+The mobile suite is written in BDD: business-readable `.feature` files, thin step definitions, and page objects that locate elements by **accessibility id**, so one set of scenarios drives Android and iOS. No feature or step file mentions a platform; the four places that cannot use an accessibility id are listed below.
 
 ## Requirement coverage
 
@@ -88,7 +88,7 @@ IS_IOS ? { testID: id } : { accessibilityLabel: id };
 
 Appium maps both to the accessibility id, so `~id` resolves identically on UiAutomator2 and XCUITest. Every page object goes through `byId()` in `support/selectors.ts`, and no page object branches on platform for element lookup.
 
-Every element the app itself labels is found this way, on both platforms, with no branch. Five places are not, and each is isolated and documented where it is defined.
+Every element the app itself labels is found this way, on both platforms, with no branch. Four places are not, and each is isolated and documented where it is defined.
 
 **Located by text, because the app renders no id for them:**
 
@@ -96,7 +96,6 @@ Every element the app itself labels is found this way, on both platforms, with n
 | ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Form validation messages                                      | They are the `errorMessage` prop of react-native-elements' `Input`, which renders its own `Text` with no `testID` or `accessibilityLabel`, so there is nothing to target but the copy.       |
 | Carousel card titles, and the hidden copy on the Swipe screen | `SliderEntry` labels all six cards `card`, so they are indistinguishable by id. The title is the only per-card signal; it is rendered `title.toUpperCase()`, hence the upper-case constants. |
-| The Login form's heading                                      | Tapped to dismiss the keyboard on iOS, where `driver.hideKeyboard()` is unreliable. Never asserted on — it only has to be an inert, non-input place to tap.                                  |
 
 `byText()` is itself platform-aware (`UiSelector().text()` on Android, an `-ios predicate string` on iOS), so these run on both platforms unchanged. Every string asserted through it is checked against the app's known copy first, so a typo in a feature file fails immediately instead of waiting out the locator timeout.
 
