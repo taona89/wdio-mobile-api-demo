@@ -1,10 +1,16 @@
-import type { APIRequestContext, APIResponse } from '@playwright/test';
+import { test, type APIRequestContext, type APIResponse } from '@playwright/test';
 import { ADMIN } from './env.js';
+import { attachExchange } from './report.js';
 import type { Booking } from './schemas.js';
 
 export interface Credentials {
     username: string;
     password: string;
+}
+
+interface RequestOptions {
+    data?: unknown;
+    headers?: Record<string, string>;
 }
 
 /**
@@ -15,23 +21,28 @@ export class BookerApi {
     constructor(private readonly request: APIRequestContext) {}
 
     createToken(credentials: Credentials = ADMIN): Promise<APIResponse> {
-        return this.request.post('/auth', { data: credentials });
+        return this.send('POST /auth', 'POST', '/auth', { data: credentials });
     }
 
     /** Accepts any body so negative tests can send invalid payloads. */
     createBooking(booking: Partial<Booking> | Record<string, unknown>): Promise<APIResponse> {
-        return this.request.post('/booking', { data: booking });
+        return this.send('POST /booking', 'POST', '/booking', { data: booking });
     }
 
     getBooking(id: number): Promise<APIResponse> {
-        return this.request.get(`/booking/${id}`);
+        return this.send(`GET /booking/${id}`, 'GET', `/booking/${id}`);
     }
 
     /** Authorised with a token from /auth, sent as the `token` cookie. Omit it to call unauthenticated. */
     deleteBooking(id: number, token?: string): Promise<APIResponse> {
-        return this.request.delete(`/booking/${id}`, {
-            headers: token ? { Cookie: `token=${token}` } : {},
-        });
+        return this.send(
+            `DELETE /booking/${id} ${token ? 'with the token' : 'without a token'}`,
+            'DELETE',
+            `/booking/${id}`,
+            {
+                headers: token ? { Cookie: `token=${token}` } : {},
+            },
+        );
     }
 
     /**
@@ -40,6 +51,25 @@ export class BookerApi {
      */
     deleteBookingAsAdmin(id: number): Promise<APIResponse> {
         const basic = Buffer.from(`${ADMIN.username}:${ADMIN.password}`).toString('base64');
-        return this.request.delete(`/booking/${id}`, { headers: { Authorization: `Basic ${basic}` } });
+        return this.send(`DELETE /booking/${id} as admin`, 'DELETE', `/booking/${id}`, {
+            headers: { Authorization: `Basic ${basic}` },
+        });
+    }
+
+    /**
+     * Every request is its own named step with the exchange attached, so a report reads
+     * "POST /booking" with its payload and response rather than a bare "POST".
+     */
+    private send(
+        title: string,
+        method: string,
+        path: string,
+        options: RequestOptions = {},
+    ): Promise<APIResponse> {
+        return test.step(title, async () => {
+            const response = await this.request.fetch(path, { method, ...options });
+            await attachExchange(method, response, options.data);
+            return response;
+        });
     }
 }

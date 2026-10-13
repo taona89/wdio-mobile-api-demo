@@ -23,8 +23,10 @@ test.describe('POST /booking - create booking', () => {
 
             const { response } = await bookings.create(payload);
 
-            const created = CreatedBookingSchema.parse(await expectJson(response, 200));
-            expect(created.booking).toEqual(payload);
+            const body = await expectJson(response, 200);
+            await test.step('The body is a booking id and a booking equal to the request', () => {
+                expect(CreatedBookingSchema.parse(body).booking).toEqual(payload);
+            });
         });
     }
 
@@ -36,7 +38,9 @@ test.describe('POST /booking - create booking', () => {
         const stored = BookingSchema.parse(await expectJson(await api.getBooking(bookingid), 200));
 
         // A GET equal to the request proves the data was stored, not just echoed back.
-        expect(stored).toEqual(payload);
+        await test.step('The stored booking equals the request', () => {
+            expect(stored).toEqual(payload);
+        });
     });
 
     test('rejects a booking that is missing a required field', async ({ bookings }) => {
@@ -48,7 +52,11 @@ test.describe('POST /booking - create booking', () => {
             type: 'observation',
             description: `Missing required field answered with HTTP ${response.status()}; a 400 would be expected.`,
         });
-        expect(response.ok(), 'request should be rejected').toBe(false);
-        expect(body, 'no booking should be created').toBeNull();
+        await test.step(`The request is rejected: HTTP ${response.status()}, where a 400 would be expected`, () => {
+            expect(response.ok(), 'request should be rejected').toBe(false);
+        });
+        await test.step('No booking is created', () => {
+            expect(body, 'no booking should be created').toBeNull();
+        });
     });
 });

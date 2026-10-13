@@ -198,7 +198,7 @@ npm run app:download:ios          # fetches the simulator .zip into ./apps
 npm run test:ios                  # override IOS_DEVICE_NAME / IOS_PLATFORM_VERSION in .env
 ```
 
-Turn off password AutoFill on the simulator first, or the sign-up scenarios fail (see "Verification status"). Without a Mac, `.github/workflows/ios.yml` does all of the above on a GitHub Actions macOS runner: it runs on every push to `main` or `ios-ci`, and on demand. It uploads the run's evidence as the `ios-artifacts` artifact and also publishes it to the `ci-ios-results` branch, so the Allure results can be fetched with plain git and merged into the combined report below.
+Turn off password AutoFill on the simulator first, or the sign-up scenarios fail (see "Verification status"). Without a Mac, `.github/workflows/ios.yml` does all of the above on a GitHub Actions macOS runner: it runs on pushes to `main` or `ios-ci` that touch the mobile suite, and on demand. It uploads the run's evidence as the `ios-artifacts` artifact and also publishes it to the `ci-ios-results` branch, so the Allure results can be fetched with plain git and merged into the combined report below.
 
 ### Reports
 
@@ -211,6 +211,8 @@ npm run test:api:allure       # API only
 ```
 
 Each command builds the report from the results of the most recent runs and opens it; rendering needs Java. The combined report groups tests as `Mobile > Android > <feature>`, `Mobile > iOS > <feature>` and `API > <spec file>`. Each platform writes to its own directory (`mobile/artifacts/allure-results/android` and `.../ios`), so one platform's run never clears the other's results. To include a CI iOS run, copy `allure-results/ios` from the `ci-ios-results` branch into `mobile/artifacts/allure-results/ios`.
+
+A mobile scenario reads as its Gherkin steps, with the end-state screenshot attached. An API test reads as named steps too, such as `POST /booking`, `The response is 200 with a JSON body` and `The stored booking equals the request`. Every request step carries what was sent and what came back (status, content type and body) as `Request` and `Response` attachments, with passwords and tokens masked. Playwright's own steps (hooks, fixtures, bare `expect` calls) are left out of the Allure report; they are still in the Playwright HTML report.
 
 The first mobile run installs the app and the UiAutomator2 server on the phone, so allow a couple of minutes. Example API output (abridged):
 
@@ -267,7 +269,8 @@ mobile/
   config/          wdio.shared.conf.ts (platform-agnostic), wdio.android.conf.ts,
                    wdio.ios.conf.ts (capabilities only), app.ts
 api/
-  support/         API client, fixtures with automatic cleanup, payload builder, zod schemas, assertions
+  support/         API client, fixtures with automatic cleanup, payload builder, zod schemas, assertions,
+                   report attachments
   tests/           auth.spec.ts, booking.spec.ts
 scripts/           download-app.mjs  (android | ios)
 .github/workflows/ ios.yml  (the iOS suite on a macOS runner)

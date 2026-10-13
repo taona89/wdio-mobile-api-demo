@@ -19,7 +19,9 @@ export default defineConfig({
         ['html', { outputFolder: 'playwright-report', open: 'never' }],
         // Absolute, because allure-playwright resolves resultsDir against the working directory
         // rather than this file.
-        ['allure-playwright', { resultsDir: join(import.meta.dirname, 'allure-results') }],
+        // `detail: false` keeps Playwright's own steps (hooks, fixtures, bare "POST", "expect") out
+        // of the Allure report, leaving the named steps the tests and the API client declare.
+        ['allure-playwright', { resultsDir: join(import.meta.dirname, 'allure-results'), detail: false }],
     ],
     outputDir: 'test-results',
     use: {
