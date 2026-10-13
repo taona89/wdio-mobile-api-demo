@@ -9,10 +9,21 @@ const LAUNCH_ATTEMPTS = 3;
 /** waitUntil reports a timeout with exactly this message; any other error is a real failure. */
 const STATE_NOT_REACHED = 'app state not reached';
 
+/**
+ * The app's state, asked through the drivers' `mobile:` command. WebdriverIO's own
+ * `queryAppState` uses an endpoint Appium has deprecated, and the two drivers name the
+ * argument differently.
+ */
+const appState = (id: string): Promise<number> =>
+    driver.execute<number, [Record<string, string>]>(
+        'mobile: queryAppState',
+        driver.isAndroid ? { appId: id } : { bundleId: id },
+    );
+
 /** True once the app reports `state`, false if it has not done so within `timeoutMs`. */
 async function reaches(id: string, state: number, timeoutMs: number): Promise<boolean> {
     try {
-        await driver.waitUntil(async () => (await driver.queryAppState(id)) === state, {
+        await driver.waitUntil(async () => (await appState(id)) === state, {
             timeout: timeoutMs,
             timeoutMsg: STATE_NOT_REACHED,
         });
