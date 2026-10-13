@@ -5,7 +5,7 @@ name: iOS mobile tests
 on:
     workflow_dispatch:
     push:
-        branches: [ios-ci]
+        branches: [main, ios-ci]
 
 permissions:
     # Needed to publish the run's evidence to the ci-ios-results branch (last step).

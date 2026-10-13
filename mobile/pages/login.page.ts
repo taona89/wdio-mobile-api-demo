@@ -75,14 +75,12 @@ class LoginPage extends AppPage {
     }
 
     private async submit(button: ChainablePromiseElement): Promise<void> {
-        // Android only. On iOS the keyboard stays up, because nothing on this screen dismisses it
-        // without side effects: the keyboard's Done key submits the form (`onSubmitEditing`), and
-        // the heading - the one inert element - is pushed under the status bar while the keyboard
-        // is open. It does not need to go: the form sits in a KeyboardAvoidingView, so the button
-        // and the validation messages stay visible above it. Android's argument is ignored.
-        if (driver.isAndroid) {
-            await hideKeyboard(button);
-        }
+        // No iOS dismiss target is passed, so on iOS the keyboard stays up: nothing on this screen
+        // dismisses it without side effects. The keyboard's Done key submits the form
+        // (`onSubmitEditing`), and the heading - the one inert element - is pushed under the
+        // status bar while the keyboard is open. It does not need to go: the form sits in a
+        // KeyboardAvoidingView, so the button and the validation messages stay visible above it.
+        await hideKeyboard();
         // On small screens the button can sit below the fold after the keyboard has been open.
         await this.scrollTo(button);
         await button.click();

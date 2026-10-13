@@ -1,17 +1,19 @@
 import { allureReporting, config as sharedConfig, prepareArtifactsDir } from './wdio.shared.conf.js';
 import { IOS_APP, assertIosAppPresent } from './app.js';
 
+const allure = allureReporting('iOS');
+
 /**
  * iOS simulator capabilities. Everything above the capabilities level — features, steps, page
  * objects — is shared with Android unchanged, which is the point of locating elements by
  * accessibility id.
  *
- * Not yet run: this was written on Windows, where there is no simulator to verify it against.
  * It needs macOS, Xcode, and `npx appium driver install xcuitest` (the driver is not a project
- * dependency, so that `npm ci` stays light for Android-only machines). See README.
+ * dependency, so that `npm ci` stays light for Android-only machines). There is no Mac among the
+ * development machines, so it is run by .github/workflows/ios.yml on a GitHub Actions runner,
+ * which also turns off the simulator's password AutoFill - the sign-up scenarios need that. See
+ * README.
  */
-const allure = allureReporting('iOS');
-
 export const config: WebdriverIO.Config = {
     ...sharedConfig,
     reporters: [...(sharedConfig.reporters ?? []), allure.reporter],

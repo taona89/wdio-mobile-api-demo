@@ -75,7 +75,7 @@ class NativeAlertPage {
                 message: await $(SELECTORS.ANDROID.MESSAGE).getText(),
             };
         }
-        // iOS (to be confirmed on a simulator): WebDriverAgent returns "Title\nMessage".
+        // iOS: WebDriverAgent returns "Title\nMessage".
         const [title = '', ...rest] = (await driver.getAlertText()).split('\n');
         return { title, message: rest.join('\n') };
     }
