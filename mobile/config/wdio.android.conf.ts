@@ -1,10 +1,14 @@
-import { config as sharedConfig, prepareArtifactsDir } from './wdio.shared.conf.js';
+import { allureReporting, config as sharedConfig, prepareArtifactsDir } from './wdio.shared.conf.js';
 import { ANDROID_APP, assertAndroidAppPresent } from './app.js';
+
+const allure = allureReporting('Android');
 
 export const config: WebdriverIO.Config = {
     ...sharedConfig,
-    // Ordered: a missing app aborts the run before the previous run's screenshots are cleared.
-    onPrepare: [assertAndroidAppPresent, prepareArtifactsDir],
+    reporters: [...(sharedConfig.reporters ?? []), allure.reporter],
+    // Ordered: a missing app aborts the run before the previous run's evidence is cleared.
+    onPrepare: [assertAndroidAppPresent, prepareArtifactsDir, allure.clearResults],
+    onComplete: allure.groupResults,
     capabilities: [
         {
             platformName: 'Android',

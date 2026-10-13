@@ -1,4 +1,4 @@
-import { config as sharedConfig, prepareArtifactsDir } from './wdio.shared.conf.js';
+import { allureReporting, config as sharedConfig, prepareArtifactsDir } from './wdio.shared.conf.js';
 import { IOS_APP, assertIosAppPresent } from './app.js';
 
 /**
@@ -10,10 +10,17 @@ import { IOS_APP, assertIosAppPresent } from './app.js';
  * It needs macOS, Xcode, and `npx appium driver install xcuitest` (the driver is not a project
  * dependency, so that `npm ci` stays light for Android-only machines). See README.
  */
+const allure = allureReporting('iOS');
+
 export const config: WebdriverIO.Config = {
     ...sharedConfig,
-    // Ordered: a missing app aborts the run before the previous run's screenshots are cleared.
-    onPrepare: [assertIosAppPresent, prepareArtifactsDir],
+    reporters: [...(sharedConfig.reporters ?? []), allure.reporter],
+    // Ordered: a missing app aborts the run before the previous run's evidence is cleared.
+    onPrepare: [assertIosAppPresent, prepareArtifactsDir, allure.clearResults],
+    onComplete: allure.groupResults,
+    // The first session compiles WebDriverAgent with xcodebuild, which takes several minutes on a
+    // cold machine (a CI runner always is one), so both waits are far above the shared defaults.
+    connectionRetryTimeout: 900_000,
     capabilities: [
         {
             platformName: 'iOS',
@@ -26,6 +33,8 @@ export const config: WebdriverIO.Config = {
             'appium:bundleId': IOS_APP.bundleId,
             'appium:orientation': 'PORTRAIT',
             'appium:newCommandTimeout': 240,
+            'appium:wdaLaunchTimeout': 600_000,
+            'appium:simulatorStartupTimeout': 300_000,
         },
     ],
 };

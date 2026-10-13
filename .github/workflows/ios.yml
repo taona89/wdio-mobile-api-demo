@@ -1,0 +1,105 @@
+name: iOS mobile tests
+
+# Runs the shared Cucumber suite against an iOS simulator. There is no Mac among the development
+# machines, so this runner is the only place the iOS half of the suite is executed.
+on:
+    workflow_dispatch:
+    push:
+        branches: [ios-ci]
+
+permissions:
+    # Needed to publish the run's evidence to the ci-ios-results branch (last step).
+    contents: write
+
+concurrency:
+    group: ios-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    ios:
+        runs-on: macos-15
+        timeout-minutes: 60
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
+
+            - run: npm ci
+
+            # Not a project dependency, so that `npm ci` stays light on Android-only machines.
+            - name: Install the XCUITest driver
+              run: npx appium driver install xcuitest
+
+            - name: Download the iOS simulator build
+              run: npm run app:download:ios
+
+            # Runner images change their simulators over time, so pick one instead of naming one:
+            # the newest iPhone on the newest runtime that the selected Xcode's SDK can target.
+            - name: Choose a simulator
+              run: |
+                  SDK_VERSION="$(xcrun --sdk iphonesimulator --show-sdk-version)"
+                  xcrun simctl list devices available -j > "$RUNNER_TEMP/devices.json"
+                  SDK_VERSION="$SDK_VERSION" python3 - "$RUNNER_TEMP/devices.json" >> "$GITHUB_ENV" <<'PY'
+                  import json, os, sys
+
+                  def version(text):
+                      return tuple(int(part) for part in text.split("."))
+
+                  sdk = version(os.environ["SDK_VERSION"])[:2]
+                  candidates = []
+                  for runtime, devices in json.load(open(sys.argv[1]))["devices"].items():
+                      if ".SimRuntime.iOS-" not in runtime:
+                          continue
+                      runtime_version = runtime.split("iOS-")[1].replace("-", ".")
+                      if version(runtime_version)[:2] > sdk:
+                          continue
+                      for device in devices:
+                          # Plain iPhones only: no SE, whose small screen changes what is on screen.
+                          if device["name"].startswith("iPhone") and "SE" not in device["name"]:
+                              candidates.append((version(runtime_version), device["name"], runtime_version, device["udid"]))
+
+                  if not candidates:
+                      sys.exit(f"no iPhone simulator available for SDK {os.environ['SDK_VERSION']}")
+
+                  _, name, runtime_version, udid = max(candidates)
+                  print(f"IOS_DEVICE_NAME={name}")
+                  print(f"IOS_PLATFORM_VERSION={runtime_version}")
+                  print(f"IOS_UDID={udid}")
+                  PY
+                  cat "$GITHUB_ENV"
+
+            - name: Boot the simulator
+              run: |
+                  xcrun simctl boot "$IOS_UDID"
+                  xcrun simctl bootstatus "$IOS_UDID" -b
+
+            - name: Run the iOS suite
+              run: npm run test:ios
+
+            - name: Upload evidence
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: ios-artifacts
+                  path: mobile/artifacts/
+                  if-no-files-found: warn
+
+            # The Allure results have to reach a machine that also holds the Android results, so
+            # that `npm run report` can merge them. A branch can be fetched with plain git.
+            - name: Publish evidence to the ci-ios-results branch
+              if: always()
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+              run: |
+                  mkdir -p "$RUNNER_TEMP/results"
+                  cp -R mobile/artifacts/. "$RUNNER_TEMP/results/" 2>/dev/null || true
+                  cd "$RUNNER_TEMP/results"
+                  echo "Run $GITHUB_RUN_ID of $GITHUB_SHA on $IOS_DEVICE_NAME, iOS $IOS_PLATFORM_VERSION" > RUN.txt
+                  git init -q -b ci-ios-results
+                  git add -A
+                  git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
+                      commit -q -m "iOS run $GITHUB_RUN_ID"
+                  git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-ios-results

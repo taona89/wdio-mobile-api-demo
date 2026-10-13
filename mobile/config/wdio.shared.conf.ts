@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import dotenv from 'dotenv';
@@ -9,7 +10,6 @@ const MOBILE_DIR = join(ROOT_DIR, 'mobile');
 const ARTIFACTS_DIR = join(MOBILE_DIR, 'artifacts');
 const SCREENSHOTS_DIR = join(ARTIFACTS_DIR, 'screenshots');
 const LOGS_DIR = join(ARTIFACTS_DIR, 'logs');
-const ALLURE_RESULTS_DIR = join(ARTIFACTS_DIR, 'allure-results');
 
 /**
  * Support and step files are listed explicitly rather than matched with a glob.
@@ -35,45 +35,84 @@ const STEP_FILES = [
 /**
  * Clear the previous run's screenshots so a stale FAIL never sits next to a new PASS.
  *
- * Only the screenshots and Allure results are removed. WebdriverIO opens its own log file under `outputDir` when the
+ * Only the screenshots are removed. WebdriverIO opens its own log file under `outputDir` when the
  * launcher starts, so deleting that directory here would pull an open file handle out from under
  * it (EBUSY on Windows, silently lost writes on POSIX).
  */
 export function prepareArtifactsDir(): void {
     rmSync(SCREENSHOTS_DIR, { recursive: true, force: true });
     mkdirSync(SCREENSHOTS_DIR, { recursive: true });
-    // Same reason: Allure merges every result file it finds, so old runs would pad the report.
-    rmSync(ALLURE_RESULTS_DIR, { recursive: true, force: true });
     mkdirSync(LOGS_DIR, { recursive: true });
 }
 
-interface AllureLabel {
-    name: string;
-    value: string;
+export type Platform = 'Android' | 'iOS';
+
+interface AllureResult {
+    labels: { name: string; value: string }[];
+    historyId?: string;
+    testCaseId?: string;
 }
 
 /**
- * Nest every feature under a "Mobile" parent suite, so the combined report (`npm run report`)
- * shows Mobile and API side by side.
+ * Allure reporting for one platform's run.
  *
- * This rewrites the result files after the run because the reporter leaves no other way in: it
- * always emits the feature name as `parentSuite`, and Allure lists a test once per value of a
- * label, so adding a second `parentSuite` from a hook shows every scenario twice.
+ * Each platform writes to its own results directory, so an Android run never clears an iOS run's
+ * results and `npm run report` can merge both. `groupResults` then files every scenario under
+ * Mobile > <platform> > <feature>, so the two runs sit side by side instead of on top of each other.
  */
-export function groupAllureResultsUnderMobile(): void {
-    if (!existsSync(ALLURE_RESULTS_DIR)) return;
+export function allureReporting(platform: Platform) {
+    const resultsDir = join(ARTIFACTS_DIR, 'allure-results', platform.toLowerCase());
 
-    for (const file of readdirSync(ALLURE_RESULTS_DIR)) {
-        if (!file.endsWith('-result.json')) continue;
+    return {
+        reporter: [
+            'allure',
+            {
+                outputDir: resultsDir,
+                // Report Gherkin steps as the test steps instead of the raw WebDriver commands.
+                useCucumberStepReporter: true,
+                disableWebdriverStepsReporting: true,
+                // Keep the saveScreenshot calls from the hooks below as attachments.
+                disableWebdriverScreenshotsReporting: false,
+            },
+        ] as [string, Record<string, unknown>],
 
-        const path = join(ALLURE_RESULTS_DIR, file);
-        const result = JSON.parse(readFileSync(path, 'utf8')) as { labels: AllureLabel[] };
-        result.labels = result.labels.map((label) =>
-            label.name === 'parentSuite' ? { ...label, name: 'suite' } : label,
-        );
-        result.labels.push({ name: 'parentSuite', value: 'Mobile' });
-        writeFileSync(path, JSON.stringify(result));
-    }
+        /** Allure merges every result file it finds, so a previous run would pad the report. */
+        clearResults: (): void => {
+            rmSync(resultsDir, { recursive: true, force: true });
+        },
+
+        /**
+         * Rewrites the result files after the run, because the reporter leaves no other way in:
+         * it always emits the feature name as `parentSuite`, and Allure lists a test once per value
+         * of a label, so adding a second `parentSuite` from a hook shows every scenario twice.
+         *
+         * The ids are made platform-specific for the same reason the suites are: the scenarios are
+         * shared, so without it Allure sees the iOS and Android results as retries of one test and
+         * shows only the newer of the two.
+         */
+        groupResults: (): void => {
+            if (!existsSync(resultsDir)) return;
+            const perPlatform = (id: string): string =>
+                createHash('md5').update(`${id}:${platform}`).digest('hex');
+
+            for (const file of readdirSync(resultsDir)) {
+                if (!file.endsWith('-result.json')) continue;
+
+                const path = join(resultsDir, file);
+                const result = JSON.parse(readFileSync(path, 'utf8')) as AllureResult;
+                result.labels = result.labels.map((label) =>
+                    label.name === 'parentSuite' ? { ...label, name: 'subSuite' } : label,
+                );
+                result.labels.push(
+                    { name: 'parentSuite', value: 'Mobile' },
+                    { name: 'suite', value: platform },
+                );
+                if (result.historyId) result.historyId = perPlatform(result.historyId);
+                if (result.testCaseId) result.testCaseId = perPlatform(result.testCaseId);
+                writeFileSync(path, JSON.stringify(result));
+            }
+        },
+    };
 }
 
 const fileSafe = (text: string): string => text.replace(/[^a-z0-9]+/gi, '_').slice(0, 120);
@@ -133,23 +172,10 @@ export const config: Omit<WebdriverIO.Config, 'capabilities'> = {
         failAmbiguousDefinitions: true,
     },
 
-    reporters: [
-        ['spec', { showPreface: false }],
-        [
-            'allure',
-            {
-                outputDir: ALLURE_RESULTS_DIR,
-                // Report Gherkin steps as the test steps instead of the raw WebDriver commands.
-                useCucumberStepReporter: true,
-                disableWebdriverStepsReporting: true,
-                // Keep the saveScreenshot calls from the hooks below as attachments.
-                disableWebdriverScreenshotsReporting: false,
-            },
-        ],
-    ],
+    // Platform configs add their own Allure reporter: see allureReporting().
+    reporters: [['spec', { showPreface: false }]],
 
     onPrepare: prepareArtifactsDir,
-    onComplete: groupAllureResultsUnderMobile,
 
     async before() {
         if (driver.isAndroid) {
