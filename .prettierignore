@@ -3,6 +3,9 @@ apps/
 package-lock.json
 api/playwright-report/
 api/test-results/
+api/allure-results/
+api/allure-report/
+allure-report/
 mobile/artifacts/
 
 # Gherkin: prettier has no parser for .feature files

@@ -8,5 +8,8 @@ apps/
 mobile/artifacts/
 api/playwright-report/
 api/test-results/
+api/allure-results/
+api/allure-report/
+allure-report/
 
 .DS_Store

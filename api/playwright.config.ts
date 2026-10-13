@@ -1,7 +1,11 @@
+import { join } from 'node:path';
 import { defineConfig } from '@playwright/test';
 import { API_BASE_URL } from './support/env.js';
 
 export default defineConfig({
+    // Allure uses the project name as the parent suite, which groups these tests under "API" in
+    // the combined report (`npm run report`), next to the mobile suite's "Mobile".
+    name: 'API',
     testDir: './tests',
     // The API is hosted on Heroku and can take a while to wake up; global setup pings it first.
     globalSetup: './support/global-setup.ts',
@@ -10,7 +14,13 @@ export default defineConfig({
     fullyParallel: true,
     // No retries locally, so failures stay visible. CI gets one retry for transient network errors.
     retries: process.env.CI ? 1 : 0,
-    reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
+    reporter: [
+        ['list'],
+        ['html', { outputFolder: 'playwright-report', open: 'never' }],
+        // Absolute, because allure-playwright resolves resultsDir against the working directory
+        // rather than this file.
+        ['allure-playwright', { resultsDir: join(import.meta.dirname, 'allure-results') }],
+    ],
     outputDir: 'test-results',
     use: {
         baseURL: API_BASE_URL,
