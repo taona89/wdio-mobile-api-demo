@@ -20,9 +20,10 @@ export const config: WebdriverIO.Config = {
     // Ordered: a missing app aborts the run before the previous run's evidence is cleared.
     onPrepare: [assertIosAppPresent, prepareArtifactsDir, allure.clearResults],
     onComplete: allure.groupResults,
-    // The first session compiles WebDriverAgent with xcodebuild, which takes several minutes on a
-    // cold machine (a CI runner always is one), so both waits are far above the shared defaults.
-    connectionRetryTimeout: 900_000,
+    // Creating the first session takes ten minutes or more on a cold machine (a CI runner always
+    // is one): it resets the simulator, installs the app and compiles WebDriverAgent. The client
+    // must outwait that, and so must Appium - see `keepAliveTimeout` in the shared config.
+    connectionRetryTimeout: 1_500_000,
     capabilities: [
         {
             platformName: 'iOS',

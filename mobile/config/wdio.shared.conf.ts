@@ -120,7 +120,12 @@ const fileSafe = (text: string): string => text.replace(/[^a-z0-9]+/gi, '_').sli
 /** Screenshot plus the native view hierarchy: the XML is what you need to debug a failing locator. */
 async function captureFailure(name: string): Promise<void> {
     await driver.saveScreenshot(join(SCREENSHOTS_DIR, `FAIL__${name}.png`));
-    writeFileSync(join(SCREENSHOTS_DIR, `FAIL__${name}.xml`), await driver.getPageSource());
+    // There is no hierarchy to dump when the app itself is not running. The driver's reason is
+    // then the evidence, and it must not replace the scenario's own failure.
+    const source = await driver
+        .getPageSource()
+        .catch((error: unknown) => `<!-- view hierarchy unavailable: ${String(error)} -->`);
+    writeFileSync(join(SCREENSHOTS_DIR, `FAIL__${name}.xml`), source);
 }
 
 /**
@@ -156,8 +161,14 @@ export const config: Omit<WebdriverIO.Config, 'capabilities'> = {
      * timeout it throws from onPrepare - which WebdriverIO logs and then carries on. Workers then
      * race a server that is not listening yet and fail with "Unable to connect to
      * http://127.0.0.1:4723/", which looks like a port or firewall problem rather than a timeout.
+     *
+     * `keepAliveTimeout` (seconds) is Appium's limit on any one request, 600 by default. Creating
+     * the first iOS session on a CI runner takes about that long, because resetting the simulator,
+     * installing the app and compiling WebDriverAgent all happen inside that single request. When
+     * it overran, Appium closed the connection, WebdriverIO opened a second session, and the
+     * abandoned first one carried on against the same simulator.
      */
-    services: [['appium', { appiumStartTimeout: 120_000 }]],
+    services: [['appium', { appiumStartTimeout: 120_000, args: { keepAliveTimeout: 1_800 } }]],
 
     framework: 'cucumber',
     cucumberOpts: {

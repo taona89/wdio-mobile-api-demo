@@ -110,6 +110,16 @@ jobs:
             - name: Run the iOS suite
               run: npm run test:ios
 
+            # If the app dies, the simulator leaves a crash report on the host. Without it, a launch
+            # that failed shows up only as a screenshot of the home screen.
+            - name: Collect the app's crash reports
+              if: always()
+              run: |
+                  mkdir -p mobile/artifacts/logs/crash-reports
+                  find "$HOME/Library/Logs/DiagnosticReports" -iname '*wdiodemoapp*' \
+                      -exec cp {} mobile/artifacts/logs/crash-reports/ \; 2>/dev/null || true
+                  ls -la mobile/artifacts/logs/crash-reports
+
             - name: Upload evidence
               if: always()
               uses: actions/upload-artifact@v4

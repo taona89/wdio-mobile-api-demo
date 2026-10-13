@@ -53,6 +53,11 @@ Three things the iOS run taught us. The first run passed only the Forms feature;
 - **iOS offers an "Automatic Strong Password" on the sign-up form.** It replaces the keyboard and discards what the test types, so the form was submitted with empty passwords. This is a simulator setting, not something a selector can fix: the workflow boots the simulator with password AutoFill turned off (see `ios.yml`). A local simulator needs the same.
 - **Nothing on the Login form dismisses the iOS keyboard without side effects.** The keyboard's Done key submits the form, and the form's heading, the one inert place to tap, is pushed under the status bar while the keyboard is open. The keyboard is therefore left up on iOS; the form sits in a `KeyboardAvoidingView`, so the button and the validation messages stay visible above it.
 
+Two more came from a later run that failed on a commit that had already passed:
+
+- **Creating the first iOS session on a CI runner takes about ten minutes**, because resetting the simulator, installing the app and compiling WebDriverAgent all happen inside that one request. That is Appium's default limit on a single request (600 s). The passing runs had finished seconds inside it; the failing one overran, so Appium closed the connection, WebdriverIO opened a second session, and the abandoned first one carried on against the same simulator. Appium's limit (`keepAliveTimeout`) and the client's (`connectionRetryTimeout`) are now well above it.
+- **`activateApp` can report success for an app that is not running.** Every lookup then finds nothing, and the scenario fails thirty seconds later with the home screen in its screenshot. `restartApp` now checks the app's real state after terminating and after launching, and launches again if the app is not in the foreground.
+
 Still **not** verified:
 
 - A **physical iPhone**. The iOS run is a simulator build on a simulator; a real device needs a signed build and a provisioning profile.
@@ -280,7 +285,7 @@ scripts/           download-app.mjs  (android | ios)
 
 - **Page Object Model under Cucumber**, with a shared `AppPage` base keyed on each screen's `<Name>-screen` accessibility id. Features read as user intent; steps delegate; locators live in one place.
 - **Accessibility-id locators everywhere they exist**, which is what makes one set of features drive two platforms. The four documented exceptions are above.
-- **Independent scenarios.** A `Before` hook kills and relaunches the app (`terminateApp`/`activateApp`) and every page navigates from Home, so order never matters and nothing leaks between scenarios.
+- **Independent scenarios.** A `Before` hook kills and relaunches the app (`terminateApp`/`activateApp`, each confirmed against the app's real state) and every page navigates from Home, so order never matters and nothing leaks between scenarios.
 - **No fixed sleeps.** All waits are condition-based, and assertions use expect-webdriverio's retrying matchers (`toHaveText`, `toBeDisplayed`) rather than reading a value once and racing a re-render. The one bounded wait proves a negative ("no alert within 3 s"), sized against the app's simulated 1.5 s request. It returns "no alert" only on its own timeout; any driver error is rethrown, so a broken session cannot pass a negative scenario.
 - **Two scroll mechanisms, deliberately.** A gesture that must land on a particular widget uses W3C pointer actions (not the deprecated `touchAction` API), so the same helper drives UiAutomator2 and XCUITest - the carousel swipe starts inside the carousel's own box for this reason. Scrolling a whole screen instead drives the scrollable container through `scrollIntoView`, because a coordinate drag is swallowed by any child that handles its own gestures. Getting this backwards is why the Swipe screen originally would not scroll at all.
 - **Explicit alert handling.** WebdriverIO 10's `acceptDialog()` switches to SpringBoard on iOS (it is built for system permission prompts) and returns silently when no dialog exists, so `NativeAlertPage` asserts the alert's exact title and message instead.
