@@ -6,6 +6,14 @@ on:
     workflow_dispatch:
     push:
         branches: [main, ios-ci]
+        # A run takes about twenty minutes of macOS runner, so skip pushes that cannot affect it.
+        paths:
+            - mobile/**
+            - scripts/**
+            - package.json
+            - package-lock.json
+            - .nvmrc
+            - .github/workflows/ios.yml
 
 permissions:
     # Needed to publish the run's evidence to the ci-ios-results branch (last step).
