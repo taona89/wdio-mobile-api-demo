@@ -1,6 +1,7 @@
-import AppScreen from './AppScreen.js';
-import TabBar from './components/TabBar.js';
-import { byId, byText } from '../helpers/selectors.js';
+import AppPage from './app.page.js';
+import TabBarPage from './tab-bar.page.js';
+import { byId, byText } from '../support/selectors.js';
+import { hideKeyboard } from '../support/keyboard.js';
 import type { Credentials } from '../data/users.js';
 
 export type LoginMode = 'login' | 'signup';
@@ -9,7 +10,7 @@ export type LoginMode = 'login' | 'signup';
  * Login / Sign up form (src/components/LoginForm.tsx).
  * Button ids follow the app's Button component rule: `button-${testID || text}`.
  */
-class LoginScreen extends AppScreen {
+class LoginPage extends AppPage {
     constructor() {
         super('Login-screen');
     }
@@ -36,13 +37,17 @@ class LoginScreen extends AppScreen {
     private get signUpButton() {
         return $(byId('button-SIGN UP'));
     }
+    /** The form's heading. No id, so text — but it is only ever tapped, never asserted on. */
+    private get heading() {
+        return $(byText('Login / Sign up Form'));
+    }
 
     /** Navigate from anywhere in the app to the form, in the requested mode. */
     async open(mode: LoginMode): Promise<void> {
-        await TabBar.waitForIsShown();
-        await TabBar.open('Login');
+        await TabBarPage.waitForIsShown();
+        await TabBarPage.open('Login');
         await this.waitForIsShown();
-        // Login is the default mode, but select it explicitly so the test never depends on that.
+        // Login is the default mode, but select it explicitly so no scenario depends on that.
         if (mode === 'login') {
             await this.loginModeTab.click();
             await this.repeatPasswordInput.waitForExist({ reverse: true });
@@ -65,36 +70,20 @@ class LoginScreen extends AppScreen {
         await this.submit(this.signUpButton);
     }
 
-    /** Validation messages have no id; each is rendered once, under its own input. */
+    /**
+     * Validation messages have no id of their own: they are the `errorMessage` prop of
+     * react-native-elements' Input, which renders its own Text. See support/selectors.ts.
+     */
     validationMessage(text: string): ChainablePromiseElement {
         return $(byText(text));
     }
 
     private async submit(button: ChainablePromiseElement): Promise<void> {
-        await this.hideKeyboard();
+        await hideKeyboard(this.heading);
         // On small screens the button can sit below the fold after the keyboard has been open.
-        await button.scrollIntoView({ scrollableElement: await this.screen });
+        await this.scrollTo(button);
         await button.click();
-    }
-
-    /**
-     * Hiding the keyboard resizes the layout (adjustResize, KeyboardAvoidingView, and the tab bar
-     * reappearing), so wait until it has really gone before locating the submit button.
-     */
-    private async hideKeyboard(): Promise<void> {
-        if (!(await driver.isKeyboardShown())) return;
-        if (driver.isAndroid) {
-            await driver.hideKeyboard();
-        } else {
-            // driver.hideKeyboard() is unreliable on iOS (an XCTest limitation), so tap the form's
-            // heading: a non-interactive element, unlike the screen centre, which may be an input.
-            await $(byText('Login / Sign up Form')).click();
-        }
-        await browser.waitUntil(async () => !(await driver.isKeyboardShown()), {
-            timeout: 5_000,
-            timeoutMsg: 'keyboard is still shown 5 s after trying to hide it',
-        });
     }
 }
 
-export default new LoginScreen();
+export default new LoginPage();

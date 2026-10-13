@@ -7,7 +7,7 @@
         "noUncheckedIndexedAccess": true,
         "noEmit": true,
         "skipLibCheck": true,
-        "types": ["node", "@wdio/globals/types", "@wdio/mocha-framework", "expect-webdriverio"]
+        "types": ["node", "@wdio/globals/types", "@wdio/cucumber-framework", "expect-webdriverio"]
     },
-    "include": ["config/**/*.ts", "src/**/*.ts", "specs/**/*.ts"]
+    "include": ["config/**/*.ts", "pages/**/*.ts", "steps/**/*.ts", "support/**/*.ts", "data/**/*.ts"]
 }

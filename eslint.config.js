@@ -1,6 +1,5 @@
 import js from '@eslint/js';
 import { defineConfig } from 'eslint/config';
-import mocha from 'eslint-plugin-mocha';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
@@ -32,22 +31,17 @@ export default defineConfig(
         },
     },
     {
-        // WebdriverIO injects driver, browser, $ and $$ as globals; Mocha provides describe/it.
+        // WebdriverIO injects driver, browser, $, $$ and expect as globals. Cucumber contributes
+        // no globals of its own: Given/When/Then are imported in each step file.
         files: ['mobile/**/*.ts'],
-        plugins: { mocha },
         languageOptions: {
             globals: {
-                ...globals.mocha,
                 driver: 'readonly',
                 browser: 'readonly',
                 $: 'readonly',
                 $$: 'readonly',
+                expect: 'readonly',
             },
-        },
-        rules: {
-            'mocha/no-exclusive-tests': 'error',
-            'mocha/no-identical-title': 'error',
-            'mocha/no-pending-tests': 'warn',
         },
     },
     {

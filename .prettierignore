@@ -4,3 +4,9 @@ package-lock.json
 api/playwright-report/
 api/test-results/
 mobile/artifacts/
+
+# Gherkin: prettier has no parser for .feature files
+*.feature
+
+# Local editor/agent settings, not part of the project
+.claude/

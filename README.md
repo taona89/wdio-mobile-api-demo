@@ -1,33 +1,111 @@
 # Mobile & API Test Automation
 
-Automated tests for the [WebdriverIO Native Demo App](https://github.com/webdriverio/native-demo-app) (v2.2.0) with **WebdriverIO 10 + Appium 3** on a physical Android device, and API tests for [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) with **Playwright's built-in request API**.
+Automated tests for the [WebdriverIO Native Demo App](https://github.com/webdriverio/native-demo-app) (v2.2.0) with **WebdriverIO 10 + Appium 3 + Cucumber**, and API tests for [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) with **Playwright's built-in request API**.
 
-| Part   | Stack                                                          | Target                         |
-| ------ | -------------------------------------------------------------- | ------------------------------ |
-| Mobile | WebdriverIO 10, Appium 3, UiAutomator2, Mocha, TypeScript      | Android physical device        |
-| API    | Playwright Test (`APIRequestContext`), zod schemas, TypeScript | `restful-booker.herokuapp.com` |
+| Part   | Stack                                                                             | Target                                       |
+| ------ | --------------------------------------------------------------------------------- | -------------------------------------------- |
+| Mobile | WebdriverIO 10, Appium 3, Cucumber (Gherkin), UiAutomator2 / XCUITest, TypeScript | Android physical device; iOS config included |
+| API    | Playwright Test (`APIRequestContext`), zod schemas, TypeScript                    | `restful-booker.herokuapp.com`               |
+
+The mobile suite is written in BDD: business-readable `.feature` files, thin step definitions, and page objects that locate elements by **accessibility id**, so one set of scenarios drives Android and iOS. No feature or step file mentions a platform; the five places that cannot use an accessibility id are listed below.
 
 ## Requirement coverage
 
-| Brief requirement                         | Covered by                                                                       | Status  | Notes                                                    |
-| ----------------------------------------- | -------------------------------------------------------------------------------- | ------- | -------------------------------------------------------- |
-| 1. Signup                                 | `mobile/specs/signup.spec.ts`                                                    | Done    | Plus a negative case: passwords that don't match         |
-| 2. Login, happy path                      | `mobile/specs/login.spec.ts` › logs in with valid credentials                    | Done    |                                                          |
-| 3. Login, invalid credentials             | `mobile/specs/login.spec.ts` › with invalid credentials                          | Done    | **Deviation, see below**                                 |
-| 4. Form interaction                       |                                                                                  | Planned |                                                          |
-| 5. Swipe / scroll                         |                                                                                  | Planned |                                                          |
-| 6. Bonus scenario                         |                                                                                  | Planned |                                                          |
-| Bonus: both platforms, shared test logic  | Shared config + platform config split; `byId`/`byText` and iOS branches in place | Partial | Android verified; iOS config to follow                   |
-| API 1. Auth: token returned               | `api/tests/auth.spec.ts`                                                         | Done    | Also proves the token authorises a protected operation   |
-| API 2. Create booking: response = request | `api/tests/booking.spec.ts`                                                      | Done    | Three payload variants, a read-back, and a negative case |
+| Brief requirement                         | Covered by                                                  | Status  | Notes                                                               |
+| ----------------------------------------- | ----------------------------------------------------------- | ------- | ------------------------------------------------------------------- |
+| 1. Signup                                 | `mobile/features/signup.feature`                            | Done    | Plus a negative case: confirmation password does not match          |
+| 2. Login, happy path                      | `login.feature` › Logging in with valid credentials         | Done    |                                                                     |
+| 3. Login, invalid credentials             | `login.feature` › Scenario Outline                          | Done    | **Deviation, see below**                                            |
+| 4. Form interaction                       | `mobile/features/forms.feature`                             | Done    | Input echo, switch toggle, active and inactive buttons              |
+| 5. Swipe / scroll                         | `mobile/features/swipe.feature`                             | Done    | Horizontal carousel paging, and a vertical scroll to hidden content |
+| 6. Bonus scenario                         | `login.feature` › `@finding`, and the `@validation` outline | Done    | A characterisation scenario that records a real finding             |
+| Bonus: both platforms, shared test logic  | `wdio.ios.conf.ts`, accessibility-id locators               | Partial | iOS config written but never executed; no macOS here                |
+| API 1. Auth: token returned               | `api/tests/auth.spec.ts`                                    | Done    | Also proves the token authorises a protected operation              |
+| API 2. Create booking: response = request | `api/tests/booking.spec.ts`                                 | Done    | Three payload variants, a read-back, and a negative case            |
+
+12 scenarios, 44 steps, 21 step definitions - all passing on a physical Android device.
+
+### Verification status
+
+The whole suite has been run end to end on a physical Android device (Samsung, Android 1440x2707, Node 22.23.2, Appium 3, build-tools 37.0.0).
+
+| Check                                                 | How                                                                        | Result                                    |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------- |
+| **Mobile suite on a real device**                     | `npm run test:android`                                                     | **4 features, 12 scenarios, all passing** |
+| **API suite**                                         | `npm run test:api`                                                         | **8 passing**                             |
+| Evidence capture                                      | Same run                                                                   | 12 `PASS__` screenshots, 0 failures       |
+| Both TypeScript projects compile under `strict`       | `npm run typecheck`                                                        | Pass                                      |
+| Lint, including type-aware `no-floating-promises`     | `npm run lint`                                                             | Pass                                      |
+| Formatting                                            | `npm run format:check`                                                     | Pass                                      |
+| Every Gherkin step resolves to exactly one definition | Features compiled to pickles and matched against the real step expressions | 44/44, 0 undefined, 0 ambiguous, 0 unused |
+| `npm ci` reproduces from the lockfile                 | `npm ci` with `engine-strict` active                                       | Pass                                      |
+| The ordered `onPrepare` guard fires first             | A run with no APK present                                                  | `SevereServiceError: App not found ...`   |
+
+Two things the device run taught us, both now fixed in the code rather than just noted:
+
+- **A coordinate swipe does not scroll the Swipe screen.** The carousel's container fills most of the viewport, so a drag starting at 75% of screen height begins _inside_ it and reanimated-carousel swallows the vertical gesture - the page did not move at all. Page scrolling now drives the scrollable container (`AppPage.scrollTo`), and coordinate swipes are reserved for gestures that must land on a specific widget, such as paging the carousel. See the note on `AppPage.scrollTo`.
+- **Appium's first cold start exceeds the service's 30 s default.** `@wdio/appium-service` waits for Appium to print `Appium REST http interface listener started`; on timeout it throws from `onPrepare`, which WebdriverIO logs before carrying on, so workers then race a server that is not listening and fail with `Unable to connect to "http://127.0.0.1:4723/"`. `appiumStartTimeout` is raised to 120 s.
+
+Still **not** verified:
+
+- The **iOS** config (`npm run test:ios`) has never been run; there is no macOS here. The iOS branches in `tab-bar.page.ts` and `native-alert.page.ts` are reasoned from the platform's behaviour, not observed.
+
+Every locator in the suite was taken from the app's source at tag `v2.2.0` rather than guessed: `src/config/TestProperties.ts`, `src/components/Button.tsx`, `src/components/LoginForm.tsx`, `src/components/FormComponents.tsx`, `src/components/SliderEntry.tsx`, `src/screens/Swipe.tsx`, `src/components/CustomBottomTabBar.tsx` and `app/(tabs)/_layout.tsx`.
 
 ### Deviation: "wrong password" on an app with no backend
 
-The demo app has no server. `src/components/LoginForm.tsx` only checks that the email is well formed and the password has at least 8 characters; anything that passes gets the success alert. So the app cannot know a password is "wrong" unless it breaks that rule. The tests therefore:
+The demo app has no server. `src/components/LoginForm.tsx` only checks that the email is well formed and the password has at least 8 characters; anything that passes gets the success alert. So the app cannot know a password is "wrong" unless it breaks that rule. The suite therefore:
 
-- **reject a wrong password** one character below the minimum, and assert the exact error "Please enter at least 8 characters" (and that no success alert follows);
-- **reject a malformed email**, asserting its error message;
-- **record a finding**: a well-formed but wrong 8-character password logs in. This characterisation test passes today and would fail the moment real credential checking is added. In a team setting this goes to the product owner; against a real backend, the same test would assert a 401-driven error instead.
+- **rejects a wrong password** one character below the minimum, asserting the exact error "Please enter at least 8 characters" and that no success alert follows;
+- **rejects a malformed email**, asserting its error message;
+- **records a finding** in the `@finding` scenario: a well-formed but wrong 8-character password logs in. This characterisation scenario passes today and would fail the moment real credential checking is added. In a team setting this goes to the product owner; against a real backend, the same scenario would assert a 401-driven error instead.
+
+## How the BDD layer is organised
+
+| Convention   | Means                                                                                                                |
+| ------------ | -------------------------------------------------------------------------------------------------------------------- |
+| `*.feature`  | Gherkin specification, one file per feature, tagged `@mobile` plus a feature tag                                     |
+| `*.page.ts`  | One page object per screen or component, default-exporting a singleton                                               |
+| `*.steps.ts` | Step definitions. One file per feature, plus `alert`, `validation` and `navigation` for steps shared across features |
+| `support/`   | Cucumber hooks, and the cross-platform selector, gesture and keyboard helpers                                        |
+| `data/`      | Test data, and the app's exact UI copy                                                                               |
+
+Rules the suite follows, which are worth knowing before adding to it:
+
+- **Steps stay thin.** A step definition names an intent and delegates; all element knowledge lives in a page object. No step contains a selector.
+- **Scenario state would go on a Cucumber World**, never on a page object: page objects are singletons shared by the whole run, so a value parked on one leaks into the next scenario. No scenario currently needs to carry state between steps, so there is no World — if you add one, declare those steps `async function (this: MyWorld)`, because an arrow function captures the module scope and never receives the World.
+- **Setup is a hook, not a step.** `support/hooks.ts` relaunches the app before every scenario, so isolation cannot be forgotten when someone adds a feature file, and the Background stays business-readable.
+- **`strict: true`.** An undefined or pending step fails the run instead of being reported as skipped. This replaces the guard `mocha/no-exclusive-tests` gave the old spec files: without it, a feature file can describe behaviour nobody implemented and still come out green. `failAmbiguousDefinitions` is on for the same reason.
+- **Copy lives in one place per kind.** Alerts are two-part (title and message), so feature files name them (`the "login success" alert is shown`) and `data/messages.ts` resolves the name. Single-line copy, such as a validation message, is written in the feature file, because that text _is_ the specification — and the step checks the expected string against the app's known copy first, so a typo in a feature fails immediately instead of waiting out a locator timeout.
+
+## Element recognition: accessibility ids
+
+The app's `testProperties()` helper (`src/config/TestProperties.ts`) sets the **same** string as `accessibilityLabel` on Android and `testID` on iOS:
+
+```ts
+IS_IOS ? { testID: id } : { accessibilityLabel: id };
+```
+
+Appium maps both to the accessibility id, so `~id` resolves identically on UiAutomator2 and XCUITest. Every page object goes through `byId()` in `support/selectors.ts`, and no page object branches on platform for element lookup.
+
+Every element the app itself labels is found this way, on both platforms, with no branch. Five places are not, and each is isolated and documented where it is defined.
+
+**Located by text, because the app renders no id for them:**
+
+| Exception                                                     | Why                                                                                                                                                                                          |
+| ------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Form validation messages                                      | They are the `errorMessage` prop of react-native-elements' `Input`, which renders its own `Text` with no `testID` or `accessibilityLabel`, so there is nothing to target but the copy.       |
+| Carousel card titles, and the hidden copy on the Swipe screen | `SliderEntry` labels all six cards `card`, so they are indistinguishable by id. The title is the only per-card signal; it is rendered `title.toUpperCase()`, hence the upper-case constants. |
+| The Login form's heading                                      | Tapped to dismiss the keyboard on iOS, where `driver.hideKeyboard()` is unreliable. Never asserted on — it only has to be an inert, non-input place to tap.                                  |
+
+`byText()` is itself platform-aware (`UiSelector().text()` on Android, an `-ios predicate string` on iOS), so these run on both platforms unchanged. Every string asserted through it is checked against the app's known copy first, so a typo in a feature file fails immediately instead of waiting out the locator timeout.
+
+**Platform-specific, because the element is not the app's to label:**
+
+| Exception       | Why                                                                                                                                                                                                                                                                                  |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Tab bar, on iOS | The accessibility id is correct on both platforms, but WebDriverAgent matches an id against a node's name _or_ label, and the Login form renders its own "Login" text. The iOS lookup is scoped to a button so the match stays unique under WebdriverIO 10's strict selectors.       |
+| Native alerts   | `Alert.alert` is drawn by the platform, not by the app, so there is no React component to put a `testID` on. Android exposes framework resource-ids; iOS exposes `XCUIElementTypeAlert` and scopes button lookups the same way the tab bar does. Both are stable platform contracts. |
 
 ## Prerequisites
 
@@ -36,10 +114,22 @@ The demo app has no server. `src/components/LoginForm.tsx` only checks that the 
 | Node.js        | 22.19+  | `node -v` (an older version is refused at install, see `.npmrc`)        |
 | Java JDK       | 17+     | `java -version`                                                         |
 | Android SDK    | recent  | `adb version` (platform-tools must be on your `PATH`)                   |
+| Build Tools    | any     | `$ANDROID_HOME/build-tools/<ver>/aapt2.exe` must exist                  |
 | `ANDROID_HOME` | set     | macOS/Linux: `echo $ANDROID_HOME`, PowerShell: `echo $env:ANDROID_HOME` |
 | `JAVA_HOME`    | set     | macOS/Linux: `echo $JAVA_HOME`, PowerShell: `echo $env:JAVA_HOME`       |
 
-Appium and the UiAutomator2 driver are **project dependencies**: `npm ci` installs them, no global Appium needed.
+The Node floor is not cosmetic: WebdriverIO 10 fails at startup on anything below 22.12. Use `nvm use` (see `.nvmrc`) if your default is older.
+
+**platform-tools on its own is not enough.** `adb version` can succeed while the run still fails with `Could not find 'aapt2.exe' ... Do you have Android Build Tools installed?`. Appium's UiAutomator2 driver shells out to `aapt2` to inspect the APK, because the config passes `appium:app`. `ANDROID_HOME` must therefore point at an SDK root containing **both** `platform-tools/` and `build-tools/<version>/`, not at a platform-tools-only directory. The leanest way there without Android Studio:
+
+```bash
+# unpack Google's command-line tools into $ANDROID_HOME/cmdline-tools/latest, then:
+sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "build-tools;37.0.0"
+```
+
+On a JDK whose version string is a bare major ("18", say) `sdkmanager` can misparse its own version check and refuse to start with "Java version 17 or higher is required" even though the JDK qualifies. `SKIP_JDK_VERSION_CHECK=1` gets past it.
+
+Appium and the UiAutomator2 driver are **project dependencies**: `npm ci` installs them, no global Appium needed. The iOS driver is not, so that `npm ci` stays light on Android-only machines — install it with `npx appium driver install xcuitest` when you need it.
 
 The easiest way to get the SDK is Android Studio (SDK Manager → Android SDK Platform-Tools). Typical locations:
 
@@ -82,14 +172,26 @@ In `.env`, set `ANDROID_UDID` to the serial from `adb devices`. It is optional w
 ## Running the tests
 
 ```bash
-npm run test:android                                          # all mobile specs on the device
-npm run test:android -- --spec mobile/specs/login.spec.ts    # one spec file
-npm run test:api                                              # API suite against the public Restful Booker
-npm run test:api:report                                       # open the Playwright HTML report
-npm run check                                                 # typecheck + lint + format check
+npm run test:android                                   # all mobile features on the device
+npm run test:android -- --spec mobile/features/login.feature   # one feature file
+npm run test:android -- --cucumberOpts.tags "@smoke"   # one tag
+npm run test:android -- --cucumberOpts.tags "@forms or @swipe"
+npm run test:api                                       # API suite against the public Restful Booker
+npm run test:api:report                                # open the Playwright HTML report
+npm run check                                          # typecheck + lint + format check
 ```
 
-The first mobile run installs the APK and the UiAutomator2 server on the phone, so allow a couple of minutes. Example API output (abridged):
+Tags available: `@mobile` on every feature, then `@login`, `@signup`, `@forms`, `@swipe`, and `@smoke`, `@validation`, `@finding` on individual scenarios.
+
+For iOS, on macOS with Xcode:
+
+```bash
+npx appium driver install xcuitest
+npm run app:download:ios          # fetches the simulator .zip into ./apps
+npm run test:ios                  # override IOS_DEVICE_NAME / IOS_PLATFORM_VERSION in .env
+```
+
+The first mobile run installs the app and the UiAutomator2 server on the phone, so allow a couple of minutes. Example API output (abridged):
 
 ```
 Running 8 tests using 1 worker
@@ -106,49 +208,63 @@ Running 8 tests using 1 worker
 
 ### Evidence
 
-- `mobile/artifacts/screenshots/`: a `PASS__` screenshot of every test's end state. A failing test or hook gets a `FAIL__` screenshot plus a `.xml` dump of the native view hierarchy for debugging locators. The folder is cleared at the start of each run.
-- `mobile/artifacts/logs/`: WebdriverIO worker logs and the Appium server log (`wdio-appium.log`).
+- `mobile/artifacts/screenshots/`: a `PASS__` screenshot of every scenario's end state. A failing step gets a `FAIL__` screenshot plus a `.xml` dump of the native view hierarchy, which is what you actually need to debug a locator — a PNG cannot tell you an element's `resource-id` or whether it was merely not displayed. The folder is cleared at the start of each run.
+- `mobile/artifacts/logs/`: WebdriverIO worker logs and the Appium server log (`wdio-appium.log`). This directory is deliberately **not** cleared: WebdriverIO opens its log file here when the launcher starts, so removing it would pull an open handle out from under it.
 - `api/playwright-report/`: the Playwright HTML report, including annotations for the API quirks observed.
+
+A scenario that dies in the `Before` hook never reaches a step, so `afterScenario` captures that case too, and skips it when a step already captured the failure.
 
 ## Troubleshooting
 
-| Symptom                                               | Fix                                                                                                                                           |
-| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `adb devices` shows `unauthorized`                    | Developer options → Revoke USB debugging authorisations, reconnect, accept the prompt on the phone.                                           |
-| Install fails (e.g. `INSTALL_FAILED_USER_RESTRICTED`) | Xiaomi: enable **Install via USB** in Developer options. Samsung: turn off **Auto Blocker** (Settings → Security and privacy).                |
-| `Neither ANDROID_HOME nor ANDROID_SDK_ROOT...`        | Set `ANDROID_HOME` as above and open a new terminal.                                                                                          |
-| Port 4723 already in use                              | Another Appium server is running; stop it. This project starts its own.                                                                       |
-| Tests time out at the first step                      | Unlock the phone and keep it awake (Developer options → Stay awake).                                                                          |
-| Alert step times out on your device                   | Open the alert in [Appium Inspector](https://github.com/appium/appium-inspector) and compare the title's `resource-id` with `NativeAlert.ts`. |
-| API global setup fails at `/ping`                     | The public host is down or asleep. Retry, or run Restful Booker locally and set `API_BASE_URL=http://localhost:3001`.                         |
+| Symptom                                               | Fix                                                                                                                                                 |
+| ----------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `npm ci` fails with `EBADENGINE`                      | Your Node is older than 22.19. This is intentional; upgrade rather than bypass, because WebdriverIO 10 cannot start on it.                          |
+| `webidl.util.markAsUncloneable is not a function`     | Same cause: Node below 22.12. Upgrade Node.                                                                                                         |
+| Every step reports as undefined                       | A step file is not being loaded. `cucumberOpts.import` lists files explicitly for a reason — see "Design decisions".                                |
+| `adb devices` shows `unauthorized`                    | Developer options → Revoke USB debugging authorisations, reconnect, accept the prompt on the phone.                                                 |
+| Install fails (e.g. `INSTALL_FAILED_USER_RESTRICTED`) | Xiaomi: enable **Install via USB** in Developer options. Samsung: turn off **Auto Blocker** (Settings → Security and privacy).                      |
+| `Neither ANDROID_HOME nor ANDROID_SDK_ROOT...`        | Set `ANDROID_HOME` as above and open a new terminal.                                                                                                |
+| `Could not find 'aapt2.exe'`                          | `ANDROID_HOME` has no `build-tools/`. Install it with `sdkmanager "build-tools;37.0.0"` - see Prerequisites.                                        |
+| `Unable to connect to "http://127.0.0.1:4723/"`       | The Appium server was not listening yet. Raise `appiumStartTimeout` in the service options; the 30 s default is short for a first cold start.       |
+| `sdkmanager` demands Java 17+ on a newer JDK          | Its version check misparses a bare major version. Set `SKIP_JDK_VERSION_CHECK=1`.                                                                   |
+| Port 4723 already in use                              | Another Appium server is running; stop it. This project starts its own.                                                                             |
+| Tests time out at the first step                      | Unlock the phone and keep it awake (Developer options → Stay awake).                                                                                |
+| Alert step times out on your device                   | Open the alert in [Appium Inspector](https://github.com/appium/appium-inspector) and compare the title's `resource-id` with `native-alert.page.ts`. |
+| API global setup fails at `/ping`                     | The public host is down or asleep. Retry, or run Restful Booker locally and set `API_BASE_URL=http://localhost:3001`.                               |
 
 ## Project structure
 
 ```
 mobile/
-  config/          wdio.shared.conf.ts (platform-agnostic), wdio.android.conf.ts (capabilities only), app.ts
-  src/screens/     Screen objects: AppScreen base, LoginScreen, components/TabBar, components/NativeAlert
-  src/helpers/     cross-platform selectors, app restart
-  src/data/        test data (users.ts) and the app's exact UI copy (messages.ts)
-  specs/           one spec file per feature
+  features/        login.feature, signup.feature, forms.feature, swipe.feature
+  steps/           navigation, login, signup, forms, swipe, alert, validation  (*.steps.ts)
+  pages/           app.page.ts (base), login, forms, swipe, tab-bar, native-alert  (*.page.ts)
+  support/         hooks.ts, selectors.ts, gestures.ts, keyboard.ts, app.ts
+  data/            users.ts (test data), messages.ts (the app's exact UI copy)
+  config/          wdio.shared.conf.ts (platform-agnostic), wdio.android.conf.ts,
+                   wdio.ios.conf.ts (capabilities only), app.ts
 api/
   support/         API client, fixtures with automatic cleanup, payload builder, zod schemas, assertions
   tests/           auth.spec.ts, booking.spec.ts
-scripts/           download-app.mjs
+scripts/           download-app.mjs  (android | ios)
 ```
 
 ## Design decisions
 
-- **Screen Object Model** with a shared `AppScreen` base. Specs read as user intent; locators live in one place.
-- **Accessibility-id locators.** The app derives `accessibilityLabel` (Android) and `testID` (iOS) from the same string, so `~id` works on both. Validation messages have no id and are located by exact text through a platform-aware `byText()`.
-- **Independent tests.** Each test kills and relaunches the app (`terminateApp`/`activateApp`) and navigates from Home, so order never matters and nothing leaks between tests.
-- **No fixed sleeps.** All waits are condition-based. The one bounded wait proves a negative ("no success alert within 3 s"), sized against the app's simulated 1.5 s request. It returns "no alert" only on its own timeout; any driver error is rethrown, so a broken session can't pass a negative test.
-- **Explicit alert handling.** WebdriverIO 10's `acceptDialog()` switches to SpringBoard on iOS (it's built for system permission prompts) and returns silently when no dialog exists, so `NativeAlert` asserts the alert's exact title and message instead.
-- **Exact-string assertions** against the app's real copy, so a text change fails a test instead of passing silently.
-- **One source of truth for the app version** (`package.json` → `config.appVersion`), shared by the download script and the WebdriverIO config.
-- **Playwright for the API part.** WebdriverIO has no built-in HTTP client; Playwright's `APIRequestContext` is first-class. Every response is checked for status and content type before parsing, then validated against a strict zod schema.
+- **Page Object Model under Cucumber**, with a shared `AppPage` base keyed on each screen's `<Name>-screen` accessibility id. Features read as user intent; steps delegate; locators live in one place.
+- **Accessibility-id locators everywhere they exist**, which is what makes one set of features drive two platforms. The three documented exceptions are above.
+- **Independent scenarios.** A `Before` hook kills and relaunches the app (`terminateApp`/`activateApp`) and every page navigates from Home, so order never matters and nothing leaks between scenarios.
+- **No fixed sleeps.** All waits are condition-based, and assertions use expect-webdriverio's retrying matchers (`toHaveText`, `toBeDisplayed`) rather than reading a value once and racing a re-render. The one bounded wait proves a negative ("no alert within 3 s"), sized against the app's simulated 1.5 s request. It returns "no alert" only on its own timeout; any driver error is rethrown, so a broken session cannot pass a negative scenario.
+- **Two scroll mechanisms, deliberately.** A gesture that must land on a particular widget uses W3C pointer actions (not the deprecated `touchAction` API), so the same helper drives UiAutomator2 and XCUITest - the carousel swipe starts inside the carousel's own box for this reason. Scrolling a whole screen instead drives the scrollable container through `scrollIntoView`, because a coordinate drag is swallowed by any child that handles its own gestures. Getting this backwards is why the Swipe screen originally would not scroll at all.
+- **Explicit alert handling.** WebdriverIO 10's `acceptDialog()` switches to SpringBoard on iOS (it is built for system permission prompts) and returns silently when no dialog exists, so `NativeAlertPage` asserts the alert's exact title and message instead.
+- **Exact-string assertions** against the app's real copy, so a text change fails a scenario instead of passing silently.
+- **Step files are listed explicitly in `cucumberOpts.import`, not globbed.** On Windows, `@wdio/cucumber-framework` converts each entry to a `file://` URL _before_ testing it for glob characters, so `steps/*.steps.ts` becomes `file:///C:/.../steps/*.steps.ts`, which the glob matcher cannot resolve. It matches nothing, and every step then reports as undefined with no explanation. Explicit paths behave identically on Windows, macOS and Linux, and they make the load order deterministic.
+- **One source of truth for the app version** (`package.json` → `config.appVersion`), shared by the download script and both WebdriverIO configs.
+- **Ordered `onPrepare`.** The missing-app guard runs before the screenshot directory is cleared, so a forgotten `npm run app:download` does not cost you the previous run's evidence. It throws `SevereServiceError`, because WebdriverIO logs any other error thrown in `onPrepare` and carries on.
+- **The Forms dropdown is deliberately out of scope.** `RNPickerSelect` is configured with `useNativeAndroidPickerStyle={false}`, so Android renders a modal list while iOS renders a picker wheel with a Done button. Driving both needs two genuinely different interactions, and there is no iOS device here to verify the second against; an untested platform branch is worse than a documented omission.
+- **Playwright for the API part.** WebdriverIO has no built-in HTTP client; Playwright's `APIRequestContext` is first-class. The API suite stays spec-style rather than Gherkin: its fixture-based cleanup, zod validation and HTML report are worth more here than a shared vocabulary with the mobile features, and nothing about `POST /booking` benefits from being readable by a non-engineer.
 - **Leave the shared API tidy.** The `bookings` fixture registers each created booking before any assertion runs and deletes it afterwards, pass or fail, using Basic auth so cleanup never depends on `/auth`, which is itself under test.
-- **Lint catches the classic WebdriverIO bug:** type-aware `no-floating-promises` flags a missing `await`, and `mocha/no-exclusive-tests` blocks a stray `it.only`.
+- **Lint catches the classic WebdriverIO bug:** type-aware `no-floating-promises` flags a missing `await`.
 - **No retries locally**, so failures stay visible. With `CI` set, the API suite allows one retry for transient network errors on the shared Heroku host.
 
 ## API observations
@@ -162,4 +278,4 @@ scripts/           download-app.mjs
 
 ## Credits
 
-The screen-object layout (an `AppScreen` base keyed on the app's `<Name>-screen` ids, plus `TabBar` and `NativeAlert` components) is adapted from WebdriverIO's [appium-boilerplate](https://github.com/webdriverio/appium-boilerplate). Differences here: WebdriverIO 10 and Appium 3, exact title-and-message alert assertions, error-safe negative waits, keyboard-aware submission, failure evidence with view-hierarchy dumps, and TypeScript strict mode.
+The page-object layout (an `AppPage` base keyed on the app's `<Name>-screen` ids, plus `TabBar` and `NativeAlert` components) is adapted from WebdriverIO's [appium-boilerplate](https://github.com/webdriverio/appium-boilerplate). Differences here: WebdriverIO 10 and Appium 3, a Cucumber BDD layer, exact title-and-message alert assertions, error-safe negative waits, keyboard-aware submission, W3C pointer gestures, failure evidence with view-hierarchy dumps, and TypeScript strict mode.

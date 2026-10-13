@@ -1,17 +1,18 @@
 import { config as sharedConfig, prepareArtifactsDir } from './wdio.shared.conf.js';
-import { ANDROID_APP, assertApkPresent } from './app.js';
+import { ANDROID_APP, assertAndroidAppPresent } from './app.js';
 
 export const config: WebdriverIO.Config = {
     ...sharedConfig,
-    onPrepare: [assertApkPresent, prepareArtifactsDir],
+    // Ordered: a missing app aborts the run before the previous run's screenshots are cleared.
+    onPrepare: [assertAndroidAppPresent, prepareArtifactsDir],
     capabilities: [
         {
             platformName: 'Android',
             'appium:automationName': 'UiAutomator2',
-            // Serial from `adb devices`. If unset, Appium picks the first device adb lists, so set it
-            // whenever more than one device or emulator is connected.
+            // Serial from `adb devices`. If unset, Appium picks the first device adb lists, so set
+            // it whenever more than one device or emulator is connected.
             ...(process.env.ANDROID_UDID ? { 'appium:udid': process.env.ANDROID_UDID } : {}),
-            'appium:app': ANDROID_APP.apkPath,
+            'appium:app': ANDROID_APP.appPath,
             'appium:appPackage': ANDROID_APP.packageName,
             'appium:appWaitActivity': ANDROID_APP.activity,
             // The default 90 s can be too short for a first USB install of the ~120 MB APK.
