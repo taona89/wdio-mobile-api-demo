@@ -44,4 +44,7 @@ const escapeQuoted = (text: string): string => text.replace(/\\/g, '\\\\').repla
 export const byText = (text: string): string =>
     driver.isAndroid
         ? `android=new UiSelector().text("${escapeQuoted(text)}")`
-        : `-ios predicate string:label == "${escapeQuoted(text)}"`;
+        : // React Native renders a Text as two nested StaticTexts with the same label on iOS, and
+          // only the inner one is an accessibility element. Without the `accessible` clause every
+          // text matches twice, which WebdriverIO 10's strict selectors reject.
+          `-ios predicate string:label == "${escapeQuoted(text)}" AND accessible == true`;
