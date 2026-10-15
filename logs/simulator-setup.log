@@ -1,0 +1,27 @@
+patched UserSettings.plist
+/Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/EffectiveUserSettings.plist: file does not exist or is not readable or is not a regular file (Error Domain=NSCocoaErrorDomain Code=260 "The file “EffectiveUserSettings.plist” couldn’t be opened because there is no such file." UserInfo={NSFilePath=/Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/EffectiveUserSettings.plist, NSURL=file:///Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/EffectiveUserSettings.plist, NSUnderlyingError=0x6000008d00f0 {Error Domain=NSPOSIXErrorDomain Code=2 "No such file or directory"}})
+File Doesn't Exist, Will Create: /Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/EffectiveUserSettings.plist
+patched EffectiveUserSettings.plist
+/Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/PublicInfo/PublicEffectiveUserSettings.plist: file does not exist or is not readable or is not a regular file (Error Domain=NSCocoaErrorDomain Code=260 "The file “PublicEffectiveUserSettings.plist” couldn’t be opened because there is no such file." UserInfo={NSFilePath=/Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/PublicInfo/PublicEffectiveUserSettings.plist, NSURL=file:///Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/PublicInfo/PublicEffectiveUserSettings.plist, NSUnderlyingError=0x60000110c120 {Error Domain=NSPOSIXErrorDomain Code=2 "No such file or directory"}})
+File Doesn't Exist, Will Create: /Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/PublicInfo/PublicEffectiveUserSettings.plist
+patched PublicInfo/PublicEffectiveUserSettings.plist
+/Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles:
+total 112
+drwxrwxrwx  10 runner  staff    320 Oct 15 06:23 .
+drwxrwxrwx   4 runner  staff    128 Oct 15 06:21 ..
+-rw-r--r--   1 runner  staff     42 Oct 15 06:21 AppAccessibilityParameters.plist
+-rw-r--r--   1 runner  staff     42 Oct 15 06:21 ClientTruth.plist
+-rw-r--r--   1 runner  staff    318 Oct 15 06:23 EffectiveUserSettings.plist
+-rw-r--r--   1 runner  staff  17222 Oct 15 06:22 MCSettingsEvents.plist
+-rw-r--r--   1 runner  staff     85 Oct 15 06:21 PayloadManifest.plist
+-rw-r--r--   1 runner  staff     42 Oct 15 06:21 ProfileTruth.plist
+drwxrwxrwx   5 runner  staff    160 Oct 15 06:23 PublicInfo
+-rw-r--r--   1 runner  staff  13464 Oct 15 06:23 UserSettings.plist
+
+/Users/runner/Library/Developer/CoreSimulator/Devices/51F5467F-16A9-4296-9C05-A74F91234967/data/Containers/Shared/SystemGroup/systemgroup.com.apple.configurationprofiles/Library/ConfigurationProfiles/PublicInfo:
+total 24
+drwxrwxrwx   5 runner  staff  160 Oct 15 06:23 .
+drwxrwxrwx  10 runner  staff  320 Oct 15 06:23 ..
+-rw-r--r--   1 runner  staff   98 Oct 15 06:22 MCMeta.plist
+-rw-r--r--   1 runner  staff   42 Oct 15 06:22 NamespacedUserSettings.plist
+-rw-r--r--   1 runner  staff  318 Oct 15 06:23 PublicEffectiveUserSettings.plist
