@@ -1,4 +1,11 @@
+import { randomUUID } from 'node:crypto';
 import type { Booking } from './schemas.js';
+
+/**
+ * A name no other booking on the shared host carries, so a test can find its own bookings by name
+ * (GET /booking?lastname=...) and never mistake someone else's for one of them.
+ */
+const uniqueName = (prefix: string): string => `${prefix}-${randomUUID().replaceAll('-', '').slice(0, 12)}`;
 
 const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
 
@@ -16,7 +23,7 @@ const randomInt = (min: number, max: number): number => Math.floor(Math.random()
  * Restful Booker normalises input: helpers/validator.js trims names, and helpers/parser.js
  * parseInt()s the price and reformats dates as YYYY-MM-DD in the server's local time zone.
  * Sending canonical values (trimmed names, integer price, YYYY-MM-DD dates) makes
- * "response equals request" an exact, fair assertion.
+ * "response equals request" an exact, fair assertion. Both names are unique to the call.
  *
  * Time-zone note: the server parses "YYYY-MM-DD" as UTC midnight and formats it in local time.
  * The public host runs in UTC, so dates round-trip unchanged. A server west of UTC would shift
@@ -26,8 +33,8 @@ export function buildBooking(overrides: Partial<Booking> = {}): Booking {
     const nights = randomInt(1, 7);
     const checkInOffset = randomInt(7, 60);
     return {
-        firstname: 'Qa',
-        lastname: `Tester${randomInt(1000, 9999)}`,
+        firstname: uniqueName('Qa'),
+        lastname: uniqueName('Tester'),
         totalprice: randomInt(100, 2000),
         depositpaid: true,
         bookingdates: {

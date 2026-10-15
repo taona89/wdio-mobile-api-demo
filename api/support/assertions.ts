@@ -1,3 +1,4 @@
+import { STATUS_CODES } from 'node:http';
 import { expect, test, type APIResponse } from '@playwright/test';
 
 /**
@@ -13,5 +14,19 @@ export function expectJson(response: APIResponse, status: number, note?: string)
         expect(response.status(), `HTTP status of ${response.url()}`).toBe(status);
         expect(response.headers()['content-type'], 'Content-Type').toContain('application/json');
         return response.json() as Promise<unknown>;
+    });
+}
+
+/**
+ * Assert an error response. This API never answers an error in JSON: it sends Express's default,
+ * the status's reason phrase as plain text (403 "Forbidden", 404 "Not Found", 418 "I'm a Teapot"),
+ * so that is the whole of its shape.
+ */
+export function expectPlainTextError(response: APIResponse, status: number): Promise<void> {
+    const reason = STATUS_CODES[status] ?? '';
+    return test.step(`The response is ${status} ${reason} as plain text`, async () => {
+        expect(response.status(), `HTTP status of ${response.url()}`).toBe(status);
+        expect(response.headers()['content-type'], 'Content-Type').toContain('text/plain');
+        expect(await response.text(), 'body').toBe(reason);
     });
 }
