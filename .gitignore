@@ -12,4 +12,7 @@ api/allure-results/
 api/allure-report/
 allure-report/
 
+# Local editor/agent settings, not part of the project
+.claude/
+
 .DS_Store
