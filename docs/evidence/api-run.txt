@@ -1,0 +1,347 @@
+npm run test:api against https://restful-booker.herokuapp.com, 2026-10-15 07:28 UTC
+
+Running 38 tests using 4 workers
+  x   2 [API] › api\tests\auth.spec.ts:60:5 › POST /auth - create token › refuses invalid credentials with 401 @known-defect (832ms)
+  ok  3 [API] › api\tests\auth.spec.ts:50:5 › POST /auth - create token › does not return a token for invalid credentials (832ms)
+  ok  4 [API] › api\tests\auth.spec.ts:9:5 › POST /auth - create token › returns a token for valid credentials (799ms)
+  ok  6 [API] › api\tests\booking.spec.ts:111:9 › POST /booking - create booking › returns the created booking matching the request, for a payload without the optional additionalneeds field (951ms)
+  ok  5 [API] › api\tests\booking.spec.ts:111:9 › POST /booking - create booking › returns the created booking matching the request, for a full payload (974ms)
+  ok  7 [API] › api\tests\booking.spec.ts:111:9 › POST /booking - create booking › returns the created booking matching the request, for a payload with the deposit not paid (957ms)
+  ok  1 [API] › api\tests\auth.spec.ts:17:5 › POST /auth - create token › the token authorises a protected operation, which is refused without it or with a made-up one (2.3s)
+  ok  9 [API] › api\tests\booking.spec.ts:136:5 › POST /booking - create booking › answers 418 for an Accept type it cannot produce (725ms)
+  x  11 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without firstname is refused with 400 (737ms)
+  x  10 [API] › api\tests\booking.spec.ts:142:5 › POST /booking - create booking › stores nothing when it answers 418 @known-defect (1.2s)
+  ok  8 [API] › api\tests\booking.spec.ts:123:5 › POST /booking - create booking › persists the booking so it can be read back by id (1.3s)
+  x  12 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without firstname is not stored (1.1s)
+  x  14 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without totalprice is refused with 400 (718ms)
+  x  13 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without lastname is not stored (957ms)
+  x  15 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without lastname is refused with 400 (771ms)
+  x  17 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without depositpaid is refused with 400 (773ms)
+  x  16 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without totalprice is not stored (1.1s)
+  x  18 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without depositpaid is not stored (1.0s)
+  x  19 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without bookingdates is refused with 400 (736ms)
+  x  21 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without checkin is refused with 400 (767ms)
+  x  20 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without bookingdates is not stored (1.1s)
+  x  23 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without checkout is refused with 400 (765ms)
+  x  22 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without checkin is not stored (1.0s)
+  x  25 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with a number as firstname is refused with 400 (771ms)
+  x  24 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without checkout is not stored (1.0s)
+  x  26 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with a number as firstname is not stored (991ms)
+  x  27 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with an empty firstname is refused with 400 @known-defect (988ms)
+  x  28 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with a negative totalprice is refused with 400 @known-defect (980ms)
+  x  30 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with a totalprice that is not a number is refused with 400 @known-defect (1.0s)
+  x  29 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with an empty firstname is not stored @known-defect (1.3s)
+  x  32 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with a negative totalprice is not stored @known-defect (1.2s)
+  x  31 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with a totalprice that is not a number is not stored @known-defect (1.3s)
+  x  33 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with depositpaid "no" is refused with 400 @known-defect (968ms)
+  x  34 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with depositpaid "no" is not stored @known-defect (1.2s)
+  x  35 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with checkout before checkin is refused with 400 @known-defect (942ms)
+  x  37 [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with a checkin date that does not exist is refused with 400 @known-defect (964ms)
+  x  36 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with checkout before checkin is not stored @known-defect (1.2s)
+  x  38 [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with a checkin date that does not exist is not stored @known-defect (1.2s)
+  1) [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without firstname is refused with 400 
+    Error: HTTP status
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 400
+    Received: 500
+      161 |             const { response } = await bookings.create(makePayload());
+      162 |
+    > 163 |             expect(response.status(), 'HTTP status').toBe(400);
+          |                                                      ^
+      164 |         });
+      165 |
+      166 |         test(`a booking ${name} is not stored`, knownDefect(stores), async ({ bookings }) => {
+        at api\tests\booking.spec.ts:163:54
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-69488-rstname-is-refused-with-400-API\error-context.md
+  2) [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without firstname is not stored 
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-a9c03-out-firstname-is-not-stored-API\error-context.md
+  3) [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without lastname is refused with 400 
+    Error: HTTP status
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 400
+    Received: 500
+      161 |             const { response } = await bookings.create(makePayload());
+      162 |
+    > 163 |             expect(response.status(), 'HTTP status').toBe(400);
+          |                                                      ^
+      164 |         });
+      165 |
+      166 |         test(`a booking ${name} is not stored`, knownDefect(stores), async ({ bookings }) => {
+        at api\tests\booking.spec.ts:163:54
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-f7ca4-astname-is-refused-with-400-API\error-context.md
+  4) [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without lastname is not stored 
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-bdf68-hout-lastname-is-not-stored-API\error-context.md
+  5) [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without totalprice is refused with 400 
+    Error: HTTP status
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 400
+    Received: 500
+      161 |             const { response } = await bookings.create(makePayload());
+      162 |
+    > 163 |             expect(response.status(), 'HTTP status').toBe(400);
+          |                                                      ^
+      164 |         });
+      165 |
+      166 |         test(`a booking ${name} is not stored`, knownDefect(stores), async ({ bookings }) => {
+        at api\tests\booking.spec.ts:163:54
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-75225-alprice-is-refused-with-400-API\error-context.md
+  6) [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without totalprice is not stored 
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-cd23d-ut-totalprice-is-not-stored-API\error-context.md
+  7) [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without depositpaid is refused with 400 
+    Error: HTTP status
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 400
+    Received: 500
+      161 |             const { response } = await bookings.create(makePayload());
+      162 |
+    > 163 |             expect(response.status(), 'HTTP status').toBe(400);
+          |                                                      ^
+      164 |         });
+      165 |
+      166 |         test(`a booking ${name} is not stored`, knownDefect(stores), async ({ bookings }) => {
+        at api\tests\booking.spec.ts:163:54
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-7f208-sitpaid-is-refused-with-400-API\error-context.md
+  8) [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without depositpaid is not stored 
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-811fb-t-depositpaid-is-not-stored-API\error-context.md
+  9) [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without bookingdates is refused with 400 
+    Error: HTTP status
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 400
+    Received: 500
+      161 |             const { response } = await bookings.create(makePayload());
+      162 |
+    > 163 |             expect(response.status(), 'HTTP status').toBe(400);
+          |                                                      ^
+      164 |         });
+      165 |
+      166 |         test(`a booking ${name} is not stored`, knownDefect(stores), async ({ bookings }) => {
+        at api\tests\booking.spec.ts:163:54
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-7322a-ngdates-is-refused-with-400-API\error-context.md
+  10) [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without bookingdates is not stored 
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-2f0e5--bookingdates-is-not-stored-API\error-context.md
+  11) [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without checkin is refused with 400 
+    Error: HTTP status
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 400
+    Received: 500
+      161 |             const { response } = await bookings.create(makePayload());
+      162 |
+    > 163 |             expect(response.status(), 'HTTP status').toBe(400);
+          |                                                      ^
+      164 |         });
+      165 |
+      166 |         test(`a booking ${name} is not stored`, knownDefect(stores), async ({ bookings }) => {
+        at api\tests\booking.spec.ts:163:54
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-899bf-checkin-is-refused-with-400-API\error-context.md
+  12) [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without checkin is not stored 
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-ed236-thout-checkin-is-not-stored-API\error-context.md
+  13) [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without checkout is refused with 400 
+    Error: HTTP status
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 400
+    Received: 500
+      161 |             const { response } = await bookings.create(makePayload());
+      162 |
+    > 163 |             expect(response.status(), 'HTTP status').toBe(400);
+          |                                                      ^
+      164 |         });
+      165 |
+      166 |         test(`a booking ${name} is not stored`, knownDefect(stores), async ({ bookings }) => {
+        at api\tests\booking.spec.ts:163:54
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-6415f-heckout-is-refused-with-400-API\error-context.md
+  14) [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without checkout is not stored 
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-9a760-hout-checkout-is-not-stored-API\error-context.md
+  15) [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with a number as firstname is refused with 400 
+    Error: HTTP status
+    expect(received).toBe(expected) // Object.is equality
+    Expected: 400
+    Received: 500
+      161 |             const { response } = await bookings.create(makePayload());
+      162 |
+    > 163 |             expect(response.status(), 'HTTP status').toBe(400);
+          |                                                      ^
+      164 |         });
+      165 |
+      166 |         test(`a booking ${name} is not stored`, knownDefect(stores), async ({ bookings }) => {
+        at api\tests\booking.spec.ts:163:54
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-97071-rstname-is-refused-with-400-API\error-context.md
+  16) [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with a number as firstname is not stored 
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+       at ..\support\fixtures.ts:84
+      82 |
+      83 |             if (api.serverErrors.length > 0) {
+    > 84 |                 throw new Error(
+         |                       ^
+      85 |                     `The server failed: ${api.serverErrors.join('; ')}. A 5xx always fails the test, ` +
+      86 |                         'known defect or not.',
+      87 |                 );
+        at Object.base.extend.verdict.auto (api\support\fixtures.ts:84:23)
+    Error Context: api\test-results\booking-POST-booking---inv-afe8d--as-firstname-is-not-stored-API\error-context.md
+  16 failed
+    [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without firstname is refused with 400 
+    [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without firstname is not stored 
+    [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without lastname is refused with 400 
+    [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without lastname is not stored 
+    [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without totalprice is refused with 400 
+    [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without totalprice is not stored 
+    [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without depositpaid is refused with 400 
+    [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without depositpaid is not stored 
+    [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without bookingdates is refused with 400 
+    [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without bookingdates is not stored 
+    [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without checkin is refused with 400 
+    [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without checkin is not stored 
+    [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking without checkout is refused with 400 
+    [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking without checkout is not stored 
+    [API] › api\tests\booking.spec.ts:160:9 › POST /booking - invalid payloads › a booking with a number as firstname is refused with 400 
+    [API] › api\tests\booking.spec.ts:166:9 › POST /booking - invalid payloads › a booking with a number as firstname is not stored 
+  22 passed (17.8s)

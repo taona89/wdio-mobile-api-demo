@@ -5,23 +5,47 @@ Automated tests for the [WebdriverIO Native Demo App](https://github.com/webdriv
 | Part   | Stack                                                                             | Target                                       |
 | ------ | --------------------------------------------------------------------------------- | -------------------------------------------- |
 | Mobile | WebdriverIO 10, Appium 3, Cucumber (Gherkin), UiAutomator2 / XCUITest, TypeScript | Android physical device; iOS simulator in CI |
-| API    | Playwright Test (`APIRequestContext`), zod schemas, TypeScript                    | `restful-booker.herokuapp.com`               |
+| API    | Playwright Test (`APIRequestContext`), zod schema validation, TypeScript          | `restful-booker.herokuapp.com`               |
 
 The mobile suite is written in BDD: business-readable `.feature` files, thin step definitions, and page objects that locate elements by **accessibility id**, so one set of scenarios drives Android and iOS. No feature or step file mentions a platform; the four places that cannot use an accessibility id are listed below.
 
+## Quick start
+
+With Node 22.19+, a JDK 17+, the Android SDK and a phone with USB debugging on (details in [Prerequisites](#prerequisites)):
+
+```bash
+npm ci                    # WebdriverIO, Appium and the UiAutomator2 driver, from the lockfile
+npm run app:download      # the demo app's APK, into ./apps
+npm run test:android      # mobile suite on the connected phone
+npm run test:api          # API suite against the public Restful Booker
+npm run report            # one Allure report for both
+```
+
+The API suite needs only Node: `npm ci && npm run test:api`. With more than one device connected, set `ANDROID_UDID` in `.env` first (see [Setup](#setup)). For iOS, see [Running the tests](#running-the-tests).
+
+## Evidence
+
+| Run                                                                 | Result                                                                                                | Evidence                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android, physical Samsung phone, 13 Oct 2026                        | 12 of 12 scenarios pass                                                                               | [End-state screenshot of every scenario](docs/evidence/android/)                                                                                                                                                                                                                                                    |
+| iOS simulator (iPhone 16e, iOS 18.5) on GitHub Actions, 15 Oct 2026 | 12 of 12 scenarios pass                                                                               | [CI run](https://github.com/taona89/wdio-mobile-api-demo/actions/runs/38691859026), with the latest run's [screenshots](https://github.com/taona89/wdio-mobile-api-demo/tree/ci-ios-results/screenshots) and [Appium log](https://github.com/taona89/wdio-mobile-api-demo/blob/ci-ios-results/logs/wdio-appium.log) |
+| API, against the public Restful Booker, 15 Oct 2026                 | 22 pass, 16 fail because the server answers `500` (see [API testing approach](#api-testing-approach)) | [Run log](docs/evidence/api-run.txt)                                                                                                                                                                                                                                                                                |
+
+`npm run report` combines all three into one Allure report; see [Reports](#reports).
+
 ## Requirement coverage
 
-| Brief requirement                         | Covered by                                                  | Status | Notes                                                               |
-| ----------------------------------------- | ----------------------------------------------------------- | ------ | ------------------------------------------------------------------- |
-| 1. Signup                                 | `mobile/features/signup.feature`                            | Done   | Plus a negative case: confirmation password does not match          |
-| 2. Login, happy path                      | `login.feature` › Logging in with valid credentials         | Done   |                                                                     |
-| 3. Login, invalid credentials             | `login.feature` › Scenario Outline                          | Done   | **Deviation, see below**                                            |
-| 4. Form interaction                       | `mobile/features/forms.feature`                             | Done   | Input echo, switch toggle, active and inactive buttons              |
-| 5. Swipe / scroll                         | `mobile/features/swipe.feature`                             | Done   | Horizontal carousel paging, and a vertical scroll to hidden content |
-| 6. Bonus scenario                         | `login.feature` › `@finding`, and the `@validation` outline | Done   | A characterisation scenario that records a real finding             |
-| Bonus: both platforms, shared test logic  | `wdio.android.conf.ts`, `wdio.ios.conf.ts`, `ios.yml`       | Done   | The same 12 scenarios pass on an Android phone and an iOS simulator |
-| API 1. Auth: token returned               | `api/tests/auth.spec.ts`                                    | Done   | Also proves the token authorises a protected operation              |
-| API 2. Create booking: response = request | `api/tests/booking.spec.ts`                                 | Done   | Three payload variants, a read-back, and a negative case            |
+| Brief requirement                         | Covered by                                                  | Status | Notes                                                                                                          |
+| ----------------------------------------- | ----------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
+| 1. Signup                                 | `mobile/features/signup.feature`                            | Done   | Plus a negative case: confirmation password does not match                                                     |
+| 2. Login, happy path                      | `login.feature` › Logging in with valid credentials         | Done   |                                                                                                                |
+| 3. Login, invalid credentials             | `login.feature` › Scenario Outline                          | Done   | **Deviation, see below**                                                                                       |
+| 4. Form interaction                       | `mobile/features/forms.feature`                             | Done   | Input echo, switch toggle, active and inactive buttons                                                         |
+| 5. Swipe / scroll                         | `mobile/features/swipe.feature`                             | Done   | Horizontal carousel paging, and a vertical scroll to hidden content                                            |
+| 6. Bonus scenario                         | `login.feature` › `@finding`, and the `@validation` outline | Done   | A characterisation scenario that records a real finding                                                        |
+| Bonus: both platforms, shared test logic  | `wdio.android.conf.ts`, `wdio.ios.conf.ts`, `ios.yml`       | Done   | The same 12 scenarios pass on an Android phone and an iOS simulator                                            |
+| API 1. Auth: token returned               | `api/tests/auth.spec.ts`                                    | Done   | Also proves the token authorises, and that a missing or made-up token does not                                 |
+| API 2. Create booking: response = request | `api/tests/booking.spec.ts`                                 | Done   | Three payload variants, a read-back, content negotiation, and 14 invalid payloads (see "API testing approach") |
 
 12 scenarios, 44 steps, 21 step definitions - all passing on a physical Android device and on an iOS simulator.
 
@@ -29,34 +53,20 @@ The mobile suite is written in BDD: business-readable `.feature` files, thin ste
 
 The whole suite has been run end to end on a physical Android device (Samsung, Android 1440x2707, Node 22.23.2, Appium 3, build-tools 37.0.0), and on an iOS simulator (iPhone 16e, iOS 18.5) on a GitHub Actions macOS runner, because there is no Mac among the development machines.
 
-| Check                                                 | How                                                                        | Result                                    |
-| ----------------------------------------------------- | -------------------------------------------------------------------------- | ----------------------------------------- |
-| **Mobile suite on a real device**                     | `npm run test:android`                                                     | **4 features, 12 scenarios, all passing** |
-| **Mobile suite on an iOS simulator**                  | `npm run test:ios`, run by `.github/workflows/ios.yml`                     | **4 features, 12 scenarios, all passing** |
-| **API suite**                                         | `npm run test:api`                                                         | **8 passing**                             |
-| Evidence capture                                      | Same run                                                                   | 12 `PASS__` screenshots, 0 failures       |
-| Both TypeScript projects compile under `strict`       | `npm run typecheck`                                                        | Pass                                      |
-| Lint, including type-aware `no-floating-promises`     | `npm run lint`                                                             | Pass                                      |
-| Formatting                                            | `npm run format:check`                                                     | Pass                                      |
-| Every Gherkin step resolves to exactly one definition | Features compiled to pickles and matched against the real step expressions | 44/44, 0 undefined, 0 ambiguous, 0 unused |
-| `npm ci` reproduces from the lockfile                 | `npm ci` with `engine-strict` active                                       | Pass                                      |
-| The ordered `onPrepare` guard fires first             | A run with no APK present                                                  | `SevereServiceError: App not found ...`   |
+| Check                                                 | How                                                                        | Result                                                                                                                                       |
+| ----------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Mobile suite on a real device**                     | `npm run test:android`                                                     | **4 features, 12 scenarios, all passing**                                                                                                    |
+| **Mobile suite on an iOS simulator**                  | `npm run test:ios`, run by `.github/workflows/ios.yml`                     | **4 features, 12 scenarios, all passing**                                                                                                    |
+| **API suite**                                         | `npm run test:api`                                                         | **38 tests: 22 pass, 16 fail.** The 22 are 8 checks and 14 known defects; the 16 are the API crashing with `500`, see "API testing approach" |
+| Evidence capture                                      | Same run                                                                   | 12 `PASS__` screenshots, 0 failures                                                                                                          |
+| Both TypeScript projects compile under `strict`       | `npm run typecheck`                                                        | Pass                                                                                                                                         |
+| Lint, including type-aware `no-floating-promises`     | `npm run lint`                                                             | Pass                                                                                                                                         |
+| Formatting                                            | `npm run format:check`                                                     | Pass                                                                                                                                         |
+| Every Gherkin step resolves to exactly one definition | Features compiled to pickles and matched against the real step expressions | 44/44, 0 undefined, 0 ambiguous, 0 unused                                                                                                    |
+| `npm ci` reproduces from the lockfile                 | `npm ci` with `engine-strict` active                                       | Pass                                                                                                                                         |
+| The ordered `onPrepare` guard fires first             | A run with no APK present                                                  | `SevereServiceError: App not found ...`                                                                                                      |
 
-Two things the device run taught us, both now fixed in the code rather than just noted:
-
-- **A coordinate swipe does not scroll the Swipe screen.** The carousel's container fills most of the viewport, so a drag starting at 75% of screen height begins _inside_ it and reanimated-carousel swallows the vertical gesture - the page did not move at all. Page scrolling now drives the scrollable container (`AppPage.scrollTo`), and coordinate swipes are reserved for gestures that must land on a specific widget, such as paging the carousel. See the note on `AppPage.scrollTo`.
-- **Appium's first cold start exceeds the service's 30 s default.** `@wdio/appium-service` waits for Appium to print `Appium REST http interface listener started`; on timeout it throws from `onPrepare`, which WebdriverIO logs before carrying on, so workers then race a server that is not listening and fail with `Unable to connect to "http://127.0.0.1:4723/"`. `appiumStartTimeout` is raised to 120 s.
-
-Three things the iOS run taught us. The first run passed only the Forms feature; no feature or step file had to change to fix the rest:
-
-- **React Native renders a `Text` as two nested `StaticText`s on iOS**, both with the same label, so every lookup by text matched twice and WebdriverIO 10's strict selectors rejected it. `byText()` now restricts the iOS lookup to the one that is an accessibility element.
-- **iOS offers an "Automatic Strong Password" on the sign-up form.** It replaces the keyboard and discards what the test types, so the form was submitted with empty passwords. This is a simulator setting, not something a selector can fix: the workflow boots the simulator with password AutoFill turned off (see `ios.yml`). A local simulator needs the same.
-- **Nothing on the Login form dismisses the iOS keyboard without side effects.** The keyboard's Done key submits the form, and the form's heading, the one inert place to tap, is pushed under the status bar while the keyboard is open. The keyboard is therefore left up on iOS; the form sits in a `KeyboardAvoidingView`, so the button and the validation messages stay visible above it.
-
-Two more came from a later run that failed on a commit that had already passed:
-
-- **Creating the first iOS session on a CI runner takes about ten minutes**, because resetting the simulator, installing the app and compiling WebDriverAgent all happen inside that one request. That is Appium's default limit on a single request (600 s). The passing runs had finished seconds inside it; the failing one overran, so Appium closed the connection, WebdriverIO opened a second session, and the abandoned first one carried on against the same simulator. Appium's limit (`keepAliveTimeout`) and the client's (`connectionRetryTimeout`) are now well above it.
-- **`activateApp` can report success for an app that is not running.** Every lookup then finds nothing, and the scenario fails thirty seconds later with the home screen in its screenshot. `restartApp` now checks the app's real state after terminating and after launching, and launches again if the app is not in the foreground.
+What the device and CI runs taught us, and what changed in the code because of each lesson, is in [docs/LESSONS.md](docs/LESSONS.md).
 
 Still **not** verified:
 
@@ -203,7 +213,7 @@ npm run app:download:ios          # fetches the simulator .zip into ./apps
 npm run test:ios                  # override IOS_DEVICE_NAME / IOS_PLATFORM_VERSION in .env
 ```
 
-Turn off password AutoFill on the simulator first, or the sign-up scenarios fail (see "Verification status"). Without a Mac, `.github/workflows/ios.yml` does all of the above on a GitHub Actions macOS runner: it runs on pushes to `main` or `ios-ci` that touch the mobile suite, and on demand. It uploads the run's evidence as the `ios-artifacts` artifact and also publishes it to the `ci-ios-results` branch, so the Allure results can be fetched with plain git and merged into the combined report below.
+Turn off password AutoFill on the simulator first, or the sign-up scenarios fail (see [docs/LESSONS.md](docs/LESSONS.md)). Without a Mac, `.github/workflows/ios.yml` does all of the above on a GitHub Actions macOS runner: it runs on pushes to `main` or `ios-ci` that touch the mobile suite, and on demand. It uploads the run's evidence as the `ios-artifacts` artifact and also publishes it to the `ci-ios-results` branch, so the Allure results can be fetched with plain git and merged into the combined report below.
 
 ### Reports
 
@@ -219,27 +229,39 @@ Each command builds the report from the results of the most recent runs and open
 
 A mobile scenario reads as its Gherkin steps, with the end-state screenshot attached. An API test reads as named steps too, such as `POST /booking`, `The response is 200 with a JSON body` and `The stored booking equals the request`. Every request step carries what was sent and what came back (status, content type and body) as `Request` and `Response` attachments, with passwords and tokens masked. Playwright's own steps (hooks, fixtures, bare `expect` calls) are left out of the Allure report; they are still in the Playwright HTML report.
 
-The first mobile run installs the app and the UiAutomator2 server on the phone, so allow a couple of minutes. Example API output (abridged):
+The first mobile run installs the app and the UiAutomator2 server on the phone, so allow a couple of minutes. Example API output (abridged). `ok` is a passing check and `x` a failure. A failure tagged `@known-defect` is failing as expected, and Playwright counts it as passed. One without the tag is a real failure: today, those are the eight payloads the API answers with `500` (see "API testing approach").
 
 ```
-Running 8 tests using 1 worker
-  ✓ POST /auth - create token › returns a token for valid credentials
-  ✓ POST /auth - create token › the token authorises a protected operation, and the operation is refused without it
-  ✓ POST /auth - create token › does not return a token for invalid credentials
-  ✓ POST /booking - create booking › returns the created booking matching the request, for a full payload
-  ✓ POST /booking - create booking › returns the created booking matching the request, for a payload without the optional additionalneeds field
-  ✓ POST /booking - create booking › returns the created booking matching the request, for a payload with the deposit not paid
-  ✓ POST /booking - create booking › persists the booking so it can be read back by id
-  ✓ POST /booking - create booking › rejects a booking that is missing a required field
-  8 passed
+Running 38 tests using 4 workers
+  ok  POST /auth - create token › returns a token for valid credentials
+  ok  POST /auth - create token › the token authorises a protected operation, which is refused without it or with a made-up one
+  ok  POST /auth - create token › does not return a token for invalid credentials
+  x   POST /auth - create token › refuses invalid credentials with 401 @known-defect
+  ok  POST /booking - create booking › returns the created booking matching the request, for a full payload
+  ok  POST /booking - create booking › persists the booking so it can be read back by id
+  ok  POST /booking - create booking › answers 418 for an Accept type it cannot produce
+  x   POST /booking - create booking › stores nothing when it answers 418 @known-defect
+  x   POST /booking - invalid payloads › a booking without lastname is refused with 400
+  x   POST /booking - invalid payloads › a booking without lastname is not stored
+  x   POST /booking - invalid payloads › a booking with depositpaid "no" is refused with 400 @known-defect
+  x   POST /booking - invalid payloads › a booking with depositpaid "no" is not stored @known-defect
+  ...
+    Error: The server failed: POST /booking answered 500 Internal Server Error. A 5xx always fails the test, known defect or not.
+  ...
+  16 failed
+  22 passed
 ```
 
-### Evidence
+`npx playwright test --config api/playwright.config.ts --grep @known-defect` runs only the known defects; `--grep-invert @known-defect` runs only the checks that hold today.
+
+### What each run writes
+
+These folders are gitignored; [Evidence](#evidence) above links the copies kept in the repo.
 
 - `mobile/artifacts/screenshots/`: a `PASS__` screenshot of every scenario's end state. A failing step gets a `FAIL__` screenshot plus a `.xml` dump of the native view hierarchy, which is what you actually need to debug a locator — a PNG cannot tell you an element's `resource-id` or whether it was merely not displayed. The folder is cleared at the start of each run.
 - `mobile/artifacts/logs/`: WebdriverIO worker logs and the Appium server log (`wdio-appium.log`). This directory is deliberately **not** cleared: WebdriverIO opens its log file here when the launcher starts, so removing it would pull an open handle out from under it.
 - `mobile/artifacts/allure-results/<platform>/` and `api/allure-results/`: the Allure results behind `npm run report`, cleared at the start of each run of that platform or suite.
-- `api/playwright-report/`: the Playwright HTML report, including annotations for the API quirks observed.
+- `api/playwright-report/`: the Playwright HTML report, including each known defect's description.
 
 A scenario that dies in the `Before` hook never reaches a step, so `afterScenario` captures that case too, and skips it when a step already captured the failure.
 
@@ -278,6 +300,7 @@ api/
                    report attachments
   tests/           auth.spec.ts, booking.spec.ts
 scripts/           download-app.mjs  (android | ios)
+docs/              LESSONS.md (what the runs taught us), evidence/ (screenshots and run logs)
 .github/workflows/ ios.yml  (the iOS suite on a macOS runner)
 ```
 
@@ -287,23 +310,37 @@ scripts/           download-app.mjs  (android | ios)
 - **Accessibility-id locators everywhere they exist**, which is what makes one set of features drive two platforms. The four documented exceptions are above.
 - **Independent scenarios.** A `Before` hook kills and relaunches the app (`terminateApp`/`activateApp`, each confirmed against the app's real state) and every page navigates from Home, so order never matters and nothing leaks between scenarios.
 - **No fixed sleeps.** All waits are condition-based, and assertions use expect-webdriverio's retrying matchers (`toHaveText`, `toBeDisplayed`) rather than reading a value once and racing a re-render. The one bounded wait proves a negative ("no alert within 3 s"), sized against the app's simulated 1.5 s request. It returns "no alert" only on its own timeout; any driver error is rethrown, so a broken session cannot pass a negative scenario.
-- **Two scroll mechanisms, deliberately.** A gesture that must land on a particular widget uses W3C pointer actions (not the deprecated `touchAction` API), so the same helper drives UiAutomator2 and XCUITest - the carousel swipe starts inside the carousel's own box for this reason. Scrolling a whole screen instead drives the scrollable container through `scrollIntoView`, because a coordinate drag is swallowed by any child that handles its own gestures. Getting this backwards is why the Swipe screen originally would not scroll at all.
+- **Two scroll mechanisms, deliberately.** A gesture that must land on a particular widget uses W3C pointer actions (not the deprecated `touchAction` API), so the same helper drives UiAutomator2 and XCUITest - the carousel swipe starts inside the carousel's own box for this reason. Scrolling a whole screen instead drives the scrollable container through `scrollIntoView`, because a coordinate drag is swallowed by any child that handles its own gestures ([docs/LESSONS.md](docs/LESSONS.md) has how this was found).
 - **Explicit alert handling.** WebdriverIO 10's `acceptDialog()` switches to SpringBoard on iOS (it is built for system permission prompts) and returns silently when no dialog exists, so `NativeAlertPage` asserts the alert's exact title and message instead.
 - **Exact-string assertions** against the app's real copy, so a text change fails a scenario instead of passing silently.
 - **Step files are listed explicitly in `cucumberOpts.import`, not globbed.** On Windows, `@wdio/cucumber-framework` converts each entry to a `file://` URL _before_ testing it for glob characters, so `steps/*.steps.ts` becomes `file:///C:/.../steps/*.steps.ts`, which the glob matcher cannot resolve. It matches nothing, and every step then reports as undefined with no explanation. Explicit paths behave identically on Windows, macOS and Linux, and they make the load order deterministic.
 - **One source of truth for the app version** (`package.json` → `config.appVersion`), shared by the download script and both WebdriverIO configs.
 - **Ordered `onPrepare`.** The missing-app guard runs before the screenshot directory is cleared, so a forgotten `npm run app:download` does not cost you the previous run's evidence. It throws `SevereServiceError`, because WebdriverIO logs any other error thrown in `onPrepare` and carries on.
 - **The Forms dropdown is deliberately out of scope.** `RNPickerSelect` is configured with `useNativeAndroidPickerStyle={false}`, so Android renders a modal list while iOS renders a picker wheel with a Done button. Driving both needs two genuinely different interactions, and the iOS one can only be exercised through the CI simulator, one twenty-minute run at a time; a half-tested platform branch is worse than a documented omission.
-- **Playwright for the API part.** WebdriverIO has no built-in HTTP client; Playwright's `APIRequestContext` is first-class. The API suite stays spec-style rather than Gherkin: its fixture-based cleanup, zod validation and HTML report are worth more here than a shared vocabulary with the mobile features, and nothing about `POST /booking` benefits from being readable by a non-engineer.
-- **Leave the shared API tidy.** The `bookings` fixture registers each created booking before any assertion runs and deletes it afterwards, pass or fail, using Basic auth so cleanup never depends on `/auth`, which is itself under test.
+- **Playwright for the API part.** WebdriverIO has no built-in HTTP client; Playwright's `APIRequestContext` is first-class. The API suite stays spec-style rather than Gherkin: its fixture-based cleanup, zod schema validation and HTML report are worth more here than a shared vocabulary with the mobile features, and nothing about `POST /booking` benefits from being readable by a non-engineer.
+- **Leave the shared API tidy.** The `bookings` fixture registers each created booking before any assertion runs and deletes it afterwards, pass or fail, using Basic auth so cleanup never depends on `/auth`, which is itself under test. A booking a test finds under its own unique name is cleaned up the same way, in case the API stored it without returning its id.
 - **Lint catches the classic WebdriverIO bug:** type-aware `no-floating-promises` flags a missing `await`.
 - **No retries locally**, so failures stay visible. With `CI` set, the API suite allows one retry for transient network errors on the shared Heroku host.
 
+## API testing approach
+
+- **Tests assert what the API should do, and known defects are marked rather than hidden.** Where Restful Booker departs from the behaviour you would expect, the test still asserts the correct behaviour (400, 401, nothing stored) and is declared with `knownDefect('...')` from `api/support/fixtures.ts`. Playwright then expects it to fail. It stays green while the API misbehaves as described, and turns red ("Expected to fail, but passed") the day the API is fixed, so a fix is noticed rather than silently absorbed. Each one is tagged `@known-defect`, and its description appears in both the Playwright and the Allure report.
+- **A 5xx always fails the test, known defect or not.** A server error is a crash, never an outcome a test may expect. The API client records every 5xx it receives, including during cleanup, and the `verdict` fixture fails the test on any of them once it has run. It decides at the end, not up front, because an expected failure would otherwise absorb the 5xx like any other failure. This is why the suite is red today: the API answers `500` to the seven payloads missing a required field and to the one with a number as its firstname, so both tests for each of those eight payloads fail, 16 in all. They pass the day the API answers `400` and stores nothing.
+- **One property per test.** An expected failure passes on _any_ failure, so a property that holds today must never share a test with one that does not. That is why invalid credentials are two tests (no token is issued, which holds; the status is 401, a known defect), and why each invalid payload is two tests (refused with 400; not stored), so each is reported, and fixed, on its own.
+- **"Not stored" is checked, not inferred.** Every booking the suite builds has a unique first and last name, so a test can ask `GET /booking?lastname=...` whether anything was stored under its name. A response body alone cannot prove that.
+- **Schema validation, not contract testing.** Responses are validated with zod schemas taken from the server's source (`api/support/schemas.ts`), and strict objects reject unknown fields. This is not consumer-driven contract testing (Pact, say) or verification against an OpenAPI spec: Restful Booker publishes no machine-readable spec, and this suite is its only consumer. Error responses are Express's plain-text reason phrases ("Forbidden", "Not Found", "I'm a Teapot"), never JSON, and `expectPlainTextError` asserts exactly that.
+
 ## API observations
 
+Each of these was observed against the public host. Those a test covers are declared there as known defects, apart from the 500s, which fail their tests outright.
+
 - Invalid credentials return `200 OK` (not `401`) with `{ "reason": "Bad credentials" }`.
-- A booking missing a required field returns `500` (a `400` would be expected).
-- The server matches `Accept` exactly and returns `418` for values it does not support.
+- A booking missing any required field, or with a number as its firstname, crashes the server: `500 Internal Server Error` (a `400` would be expected). Nothing is stored.
+- Values are not validated. An empty firstname, a non-numeric price (stored as `null`), a negative price, `depositpaid: "no"` (stored as `true`), checkout before checkin, and a date that does not exist (stored as `"0NaN-aN-aN"`) are all accepted with `200` and stored.
+- The server matches `Accept` exactly and returns `418` for values it does not support, but `POST /booking` stores the booking anyway, so a client that retries after the 418 creates a duplicate.
+- `Accept: application/xml` returns an XML body labelled `Content-Type: text/html`. Observed, not tested: XML is outside the brief.
+- Unknown fields in a booking are dropped silently.
+- Errors are plain-text reason phrases, never JSON.
 - A successful `DELETE` returns `201`; deleting a booking that doesn't exist returns `405`.
 - Stored data is normalised: names are trimmed, prices truncated with `parseInt`, dates reformatted as `YYYY-MM-DD` in the server's time zone. The payload builder sends canonical values so "response equals request" is exact. A server running west of UTC would shift dates back a day, and these tests would report it.
 - The public host resets its data periodically and anyone can delete bookings with the published admin credentials, so a test may very rarely see its booking vanish. Cleanup tolerates "already gone".
