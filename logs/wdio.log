@@ -1,0 +1,2 @@
+2026-11-26T09:24:27.537Z WARN webdriver: WebDriverError: Could not proxy command to the remote server. Original error: socket hang up when running "elements" with method "POST"
+2026-11-26T09:24:27.566Z ERROR webdriver: WebDriverError: Could not proxy command to the remote server. Original error: socket hang up when running "elements" with method "POST"
