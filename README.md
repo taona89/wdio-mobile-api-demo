@@ -227,7 +227,7 @@ Turn off password AutoFill on the simulator first, or the sign-up scenarios fail
 | `.github/workflows/android.yml` | Ubuntu   | Android emulator: Pixel 6, Android 15 (API 35), plain AOSP image |
 | `.github/workflows/ios.yml`     | macOS 15 | iOS simulator: the newest iPhone the runner's Xcode can target   |
 
-The iOS workflow starts sessions with a pre-built WebDriverAgent (the helper app Appium drives iOS through), downloaded to match the pinned driver, instead of compiling it on every run; that took the job from 17-21 minutes to about 13. A local Mac still compiles it.
+The iOS workflow starts sessions with a pre-built WebDriverAgent (the helper app Appium drives iOS through), downloaded to match the pinned driver, so no run compiles it. That has not made runs measurably shorter: most of an iOS run is the simulator reset and the first WebDriverAgent launch (see [docs/LESSONS.md](docs/LESSONS.md)). A local Mac still compiles it.
 
 Both run the same features, steps and page objects as a local run, on every push to any branch that touches the mobile suite, and on demand from the Actions tab, so a change is proven on both platforms before it reaches `main`. Each uploads its screenshots and logs as an artifact (`android-artifacts`, which also holds the emulator's logcat, and `ios-artifacts`). Runs on `main` also publish them to the `ci-android-results` and `ci-ios-results` branches, so they can be browsed on GitHub and the Allure results fetched with plain git. A run that fails before the suite starts publishes nothing, so the last evidence stays in place.
 

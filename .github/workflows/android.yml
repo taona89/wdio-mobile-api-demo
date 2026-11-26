@@ -58,9 +58,9 @@ jobs:
             # so no Google sign-in or password-saving prompt can cover the app mid-scenario. The demo
             # APK ships x86_64 libraries, so it runs natively on the emulator.
             #
-            # Animations stay on, as on a phone. The carousel pages with a Reanimated animation, and
-            # Reanimated reads a system animation scale of 0 as "reduce motion": with animations
-            # off, the swipe left the carousel on its first card.
+            # Animations stay on, as on the phone and the iOS simulator, so the app runs as a user
+            # sees it: the carousel is animated, and Reanimated reads an animation scale of 0 as
+            # "reduce motion".
             #
             # Each `script` line runs as its own shell command and the emulator is shut down when
             # the step ends, so the device log is saved on the same line as the run, pass or fail.
