@@ -8,8 +8,8 @@ const allure = allureReporting('iOS');
  * objects — is shared with Android unchanged, which is the point of locating elements by
  * accessibility id.
  *
- * It needs macOS, Xcode, and `npx appium driver install xcuitest` (the driver is not a project
- * dependency, so that `npm ci` stays light for Android-only machines). There is no Mac among the
+ * It needs macOS, Xcode, and `npm run driver:ios` (the driver is not a project dependency, so that
+ * `npm ci` stays light for Android-only machines). There is no Mac among the
  * development machines, so it is run by .github/workflows/ios.yml on a GitHub Actions runner,
  * which also turns off the simulator's password AutoFill - the sign-up scenarios need that. See
  * README.
@@ -20,9 +20,10 @@ export const config: WebdriverIO.Config = {
     // Ordered: a missing app aborts the run before the previous run's evidence is cleared.
     onPrepare: [assertIosAppPresent, prepareArtifactsDir, allure.clearResults],
     onComplete: allure.groupResults,
-    // Creating the first session takes ten minutes or more on a cold machine (a CI runner always
-    // is one): it resets the simulator, installs the app and compiles WebDriverAgent. The client
-    // must outwait that, and so must Appium - see `keepAliveTimeout` in the shared config.
+    // Creating the first session can take ten minutes or more on a cold machine (a CI runner always
+    // is one): it resets the simulator, installs the app and, without a pre-built WebDriverAgent,
+    // compiles one. The client must outwait that, and so must Appium - see `keepAliveTimeout` in
+    // the shared config.
     connectionRetryTimeout: 1_500_000,
     capabilities: [
         {
@@ -38,6 +39,15 @@ export const config: WebdriverIO.Config = {
             'appium:newCommandTimeout': 240,
             'appium:wdaLaunchTimeout': 600_000,
             'appium:simulatorStartupTimeout': 300_000,
+            // Path to a pre-built WebDriverAgentRunner-Runner.app, set by .github/workflows/ios.yml.
+            // The driver then installs and launches it instead of compiling WebDriverAgent with
+            // xcodebuild. Unset, as on a local Mac, the driver compiles it as usual.
+            ...(process.env.IOS_PREBUILT_WDA
+                ? {
+                      'appium:usePreinstalledWDA': true,
+                      'appium:prebuiltWDAPath': process.env.IOS_PREBUILT_WDA,
+                  }
+                : {}),
         },
     ],
 };

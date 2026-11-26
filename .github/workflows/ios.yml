@@ -43,6 +43,22 @@ jobs:
             - name: Install the XCUITest driver
               run: npm run driver:ios
 
+            # The driver otherwise compiles WebDriverAgent with xcodebuild when the first session
+            # starts, which is most of that session's ten minutes. This fetches the simulator build
+            # that matches the installed driver (6 MB); wdio.ios.conf.ts installs and launches it
+            # when IOS_PREBUILT_WDA is set. It needs iOS 17 or later, which the chosen simulator is.
+            - name: Download a pre-built WebDriverAgent
+              run: |
+                  npx appium driver run xcuitest download-wda -- --outdir="$RUNNER_TEMP/wda" --kind=sim --platform=ios
+                  WDA_APP="$(find "$RUNNER_TEMP/wda" -maxdepth 4 -type d -name 'WebDriverAgentRunner-Runner.app' | head -1)"
+                  if [ -z "$WDA_APP" ]; then
+                      echo "no WebDriverAgentRunner-Runner.app in the download:"
+                      find "$RUNNER_TEMP/wda" -maxdepth 4 | head -40
+                      exit 1
+                  fi
+                  echo "IOS_PREBUILT_WDA=$WDA_APP" >> "$GITHUB_ENV"
+                  echo "IOS_PREBUILT_WDA=$WDA_APP"
+
             - name: Download the iOS simulator build
               run: npm run app:download:ios
 
