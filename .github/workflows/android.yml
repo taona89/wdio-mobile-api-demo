@@ -58,6 +58,10 @@ jobs:
             # so no Google sign-in or password-saving prompt can cover the app mid-scenario. The demo
             # APK ships x86_64 libraries, so it runs natively on the emulator.
             #
+            # Animations stay on, as on a phone. The carousel pages with a Reanimated animation, and
+            # Reanimated reads a system animation scale of 0 as "reduce motion": with animations
+            # off, the swipe left the carousel on its first card.
+            #
             # Each `script` line runs as its own shell command and the emulator is shut down when
             # the step ends, so the device log is saved on the same line as the run, pass or fail.
             - name: Run the Android suite on an emulator
@@ -67,7 +71,7 @@ jobs:
                   target: default
                   arch: x86_64
                   profile: pixel_6
-                  disable-animations: true
+                  disable-animations: false
                   script: |
                       npm run test:android; code=$?; mkdir -p mobile/artifacts/logs; adb logcat -d > mobile/artifacts/logs/logcat.txt; exit $code
 
