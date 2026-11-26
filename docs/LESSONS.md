@@ -29,3 +29,7 @@ The first run passed only the Forms feature. No feature or step file had to chan
 
 - **With the system animations off, the carousel did not page.** Turning animations off is the usual advice for UI tests on an emulator, and the first CI run did it. The carousel moves between cards with a Reanimated animation, and Reanimated reads an animation scale of 0 as "reduce motion", so the swipe left the first card in place. The emulator now keeps animations on, as the phone and the iOS simulator do, and the scenario passes.
 - **The scenario caught it because of its last step.** The next card always shows a strip at the right edge (each page is 85% of the screen wide, and the carousel spans all of it), so "the carousel shows GREAT COMMUNITY" holds even when the swipe does nothing. "The carousel no longer shows FULLY OPEN SOURCE" is the step that proves the carousel moved.
+
+## iOS: a faster session start
+
+- **Compiling WebDriverAgent on every run cost three to eight minutes.** The XCUITest driver builds it with `xcodebuild` when the first session starts, unless it is given one already built. The workflow now downloads the simulator build that matches the pinned driver (WebDriverAgent 16.16.3, 6 MB) and the iOS config starts it with `usePreinstalledWDA`. The iOS job went from 17 and 21 minutes, on two runs that compiled it, to 13.
