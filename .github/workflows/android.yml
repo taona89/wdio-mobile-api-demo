@@ -1,0 +1,98 @@
+name: Android mobile tests
+
+# Runs the shared Cucumber suite against an Android emulator, so every change is checked on
+# Android without a phone attached. The physical-phone run stays the reference; this one catches
+# a regression before it reaches main.
+on:
+    workflow_dispatch:
+    # Every branch, so a change is proven on Android before it reaches main. Skip pushes that
+    # cannot affect the mobile suite.
+    push:
+        paths:
+            - mobile/**
+            - scripts/**
+            - package.json
+            - package-lock.json
+            - .nvmrc
+            - .github/workflows/android.yml
+
+permissions:
+    # Needed to publish main's evidence to the ci-android-results branch (last step).
+    contents: write
+
+concurrency:
+    group: android-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    android:
+        runs-on: ubuntu-24.04
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version-file: .nvmrc
+                  cache: npm
+
+            # The UiAutomator2 driver builds and signs its server APK with the JDK.
+            - uses: actions/setup-java@v4
+              with:
+                  distribution: temurin
+                  java-version: 17
+
+            - run: npm ci
+
+            - name: Download the Android app
+              run: npm run app:download
+
+            # Without hardware acceleration the emulator is too slow to boot within the timeout.
+            - name: Enable KVM
+              run: |
+                  echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+                  sudo udevadm control --reload-rules
+                  sudo udevadm trigger --name-match=kvm
+
+            # A Pixel 6 on Android 15. The image is plain AOSP (`default`), with no Google services,
+            # so no Google sign-in or password-saving prompt can cover the app mid-scenario. The demo
+            # APK ships x86_64 libraries, so it runs natively on the emulator.
+            #
+            # Each `script` line runs as its own shell command and the emulator is shut down when
+            # the step ends, so the device log is saved on the same line as the run, pass or fail.
+            - name: Run the Android suite on an emulator
+              uses: reactivecircus/android-emulator-runner@v2
+              with:
+                  api-level: 35
+                  target: default
+                  arch: x86_64
+                  profile: pixel_6
+                  disable-animations: true
+                  script: |
+                      npm run test:android; code=$?; mkdir -p mobile/artifacts/logs; adb logcat -d > mobile/artifacts/logs/logcat.txt; exit $code
+
+            - name: Upload evidence
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: android-artifacts
+                  path: mobile/artifacts/
+                  if-no-files-found: warn
+
+            # Screenshots and logs on a branch can be browsed on GitHub without downloading the
+            # artifact. Only main's runs are published, and only once the suite has produced
+            # screenshots, so a run that dies during setup cannot replace the last evidence.
+            - name: Publish evidence to the ci-android-results branch
+              if: always() && github.ref == 'refs/heads/main' && hashFiles('mobile/artifacts/screenshots/*.png') != ''
+              env:
+                  GITHUB_TOKEN: ${{ github.token }}
+              run: |
+                  mkdir -p "$RUNNER_TEMP/results"
+                  cp -R mobile/artifacts/. "$RUNNER_TEMP/results/" 2>/dev/null || true
+                  cd "$RUNNER_TEMP/results"
+                  echo "Run $GITHUB_RUN_ID of $GITHUB_SHA on an Android emulator: Pixel 6, Android 15 (API 35)" > RUN.txt
+                  git init -q -b ci-android-results
+                  git add -A
+                  git -c user.name="github-actions[bot]" -c user.email="github-actions[bot]@users.noreply.github.com" \
+                      commit -q -m "Android run $GITHUB_RUN_ID"
+                  git push -f "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" ci-android-results
