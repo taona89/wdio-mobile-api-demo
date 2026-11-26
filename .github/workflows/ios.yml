@@ -4,9 +4,9 @@ name: iOS mobile tests
 # machines, so this runner is the only place the iOS half of the suite is executed.
 on:
     workflow_dispatch:
+    # Every branch, so a change is proven on iOS before it reaches main. A run takes about twenty
+    # minutes of macOS runner, so skip pushes that cannot affect it.
     push:
-        branches: [main]
-        # A run takes about twenty minutes of macOS runner, so skip pushes that cannot affect it.
         paths:
             - mobile/**
             - scripts/**
@@ -37,9 +37,11 @@ jobs:
 
             - run: npm ci
 
-            # Not a project dependency, so that `npm ci` stays light on Android-only machines.
+            # Not a project dependency, so that `npm ci` stays light on Android-only machines. The
+            # script pins the version: an unpinned install takes the newest driver, which may need a
+            # newer Appium than the lockfile has (see docs/LESSONS.md).
             - name: Install the XCUITest driver
-              run: npx appium driver install xcuitest
+              run: npm run driver:ios
 
             - name: Download the iOS simulator build
               run: npm run app:download:ios
@@ -130,8 +132,10 @@ jobs:
 
             # The Allure results have to reach a machine that also holds the Android results, so
             # that `npm run report` can merge them. A branch can be fetched with plain git.
+            # Only main's runs are published, and only once the suite has produced screenshots, so
+            # a run that dies during setup cannot replace the last evidence with an empty commit.
             - name: Publish evidence to the ci-ios-results branch
-              if: always()
+              if: always() && github.ref == 'refs/heads/main' && hashFiles('mobile/artifacts/screenshots/*.png') != ''
               env:
                   GITHUB_TOKEN: ${{ github.token }}
               run: |

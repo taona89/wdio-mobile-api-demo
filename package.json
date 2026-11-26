@@ -13,6 +13,7 @@
     "scripts": {
         "app:download": "node scripts/download-app.mjs android",
         "app:download:ios": "node scripts/download-app.mjs ios",
+        "driver:ios": "appium driver install xcuitest@12.19.1",
         "appium:doctor": "appium driver doctor uiautomator2",
         "test:android": "wdio run mobile/config/wdio.android.conf.ts --tsConfigPath=mobile/tsconfig.json",
         "test:ios": "wdio run mobile/config/wdio.ios.conf.ts --tsConfigPath=mobile/tsconfig.json",
