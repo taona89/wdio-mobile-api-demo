@@ -19,3 +19,13 @@ The first run passed only the Forms feature. No feature or step file had to chan
 
 - **Creating the first iOS session on a CI runner takes about ten minutes**, because resetting the simulator, installing the app and compiling WebDriverAgent all happen inside that one request. That is Appium's default limit on a single request (600 s). The passing runs had finished seconds inside it; the failing one overran, so Appium closed the connection, WebdriverIO opened a second session, and the abandoned first one carried on against the same simulator. Appium's limit (`keepAliveTimeout`) and the client's (`connectionRetryTimeout`) are now well above it.
 - **`activateApp` can report success for an app that is not running.** Every lookup then finds nothing, and the scenario fails thirty seconds later with the home screen in its screenshot. `restartApp` now checks the app's real state after terminating and after launching, and launches again if the app is not in the foreground.
+
+## iOS: a run that failed with no change to the project
+
+- **An unpinned driver install broke CI overnight.** The workflow installed the XCUITest driver with `appium driver install xcuitest`, which takes the newest release. Version 13 needs Appium 4 and Node 22.22.2, while the lockfile has Appium 3.8 and `.nvmrc` Node 22.19, so the install failed before a single test ran. `npm run driver:ios` now pins 12.19.1, the version the last passing run used. Moving to driver 13 means moving the whole stack to Appium 4, as one deliberate change.
+- **The same run replaced the published evidence with an empty commit**, because the publishing step ran whatever had happened before it. It now publishes only from `main`, and only once the suite has produced screenshots.
+
+## Android: the first emulator run in CI
+
+- **With the system animations off, the carousel did not page.** Turning animations off is the usual advice for UI tests on an emulator, and the first CI run did it. The carousel moves between cards with a Reanimated animation, and Reanimated reads an animation scale of 0 as "reduce motion", so the swipe left the first card in place. The emulator now keeps animations on, as the phone and the iOS simulator do, and the scenario passes.
+- **The scenario caught it because of its last step.** The next card always shows a strip at the right edge (each page is 85% of the screen wide, and the carousel spans all of it), so "the carousel shows GREAT COMMUNITY" holds even when the swipe does nothing. "The carousel no longer shows FULLY OPEN SOURCE" is the step that proves the carousel moved.

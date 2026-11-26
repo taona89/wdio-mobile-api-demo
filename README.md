@@ -1,11 +1,14 @@
 # Mobile & API Test Automation
 
+[![Android mobile tests](https://github.com/taona89/wdio-mobile-api-demo/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/taona89/wdio-mobile-api-demo/actions/workflows/android.yml?query=branch%3Amain)
+[![iOS mobile tests](https://github.com/taona89/wdio-mobile-api-demo/actions/workflows/ios.yml/badge.svg?branch=main)](https://github.com/taona89/wdio-mobile-api-demo/actions/workflows/ios.yml?query=branch%3Amain)
+
 Automated tests for the [WebdriverIO Native Demo App](https://github.com/webdriverio/native-demo-app) (v2.2.0) with **WebdriverIO 10 + Appium 3 + Cucumber**, and API tests for [Restful Booker](https://restful-booker.herokuapp.com/apidoc/index.html) with **Playwright's built-in request API**.
 
-| Part   | Stack                                                                             | Target                                       |
-| ------ | --------------------------------------------------------------------------------- | -------------------------------------------- |
-| Mobile | WebdriverIO 10, Appium 3, Cucumber (Gherkin), UiAutomator2 / XCUITest, TypeScript | Android physical device; iOS simulator in CI |
-| API    | Playwright Test (`APIRequestContext`), zod schema validation, TypeScript          | `restful-booker.herokuapp.com`               |
+| Part   | Stack                                                                             | Target                                                            |
+| ------ | --------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
+| Mobile | WebdriverIO 10, Appium 3, Cucumber (Gherkin), UiAutomator2 / XCUITest, TypeScript | Android physical device; Android emulator and iOS simulator in CI |
+| API    | Playwright Test (`APIRequestContext`), zod schema validation, TypeScript          | `restful-booker.herokuapp.com`                                    |
 
 The mobile suite is written in BDD: business-readable `.feature` files, thin step definitions, and page objects that locate elements by **accessibility id**, so one set of scenarios drives Android and iOS. No feature or step file mentions a platform; the four places that cannot use an accessibility id are listed below.
 
@@ -25,37 +28,39 @@ The API suite needs only Node: `npm ci && npm run test:api`. With more than one 
 
 ## Evidence
 
-| Run                                                                 | Result                                                                                                | Evidence                                                                                                                                                                                                                                                                                                            |
-| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Android, physical Samsung phone, 13 Oct 2026                        | 12 of 12 scenarios pass                                                                               | [End-state screenshot of every scenario](docs/evidence/android/)                                                                                                                                                                                                                                                    |
-| iOS simulator (iPhone 16e, iOS 18.5) on GitHub Actions, 15 Oct 2026 | 12 of 12 scenarios pass                                                                               | [CI run](https://github.com/taona89/wdio-mobile-api-demo/actions/runs/38691859026), with the latest run's [screenshots](https://github.com/taona89/wdio-mobile-api-demo/tree/ci-ios-results/screenshots) and [Appium log](https://github.com/taona89/wdio-mobile-api-demo/blob/ci-ios-results/logs/wdio-appium.log) |
-| API, against the public Restful Booker, 15 Oct 2026                 | 22 pass, 16 fail because the server answers `500` (see [API testing approach](#api-testing-approach)) | [Run log](docs/evidence/api-run.txt)                                                                                                                                                                                                                                                                                |
+| Run                                                                   | Result                                                                                                | Evidence                                                                                                                                                                                                                                                                                                                    |
+| --------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Android, physical Samsung phone, 13 Oct 2026                          | 12 of 12 scenarios pass                                                                               | [End-state screenshot of every scenario](docs/evidence/android/)                                                                                                                                                                                                                                                            |
+| Android emulator (Pixel 6, Android 15) on GitHub Actions, 26 Nov 2026 | 12 of 12 scenarios pass                                                                               | [CI run](https://github.com/taona89/wdio-mobile-api-demo/actions/runs/45775859607), with the latest run's [screenshots](https://github.com/taona89/wdio-mobile-api-demo/tree/ci-android-results/screenshots) and [Appium log](https://github.com/taona89/wdio-mobile-api-demo/blob/ci-android-results/logs/wdio-appium.log) |
+| iOS simulator (iPhone 16e, iOS 18.5) on GitHub Actions, 15 Oct 2026   | 12 of 12 scenarios pass                                                                               | [CI run](https://github.com/taona89/wdio-mobile-api-demo/actions/runs/38691859026), with the latest run's [screenshots](https://github.com/taona89/wdio-mobile-api-demo/tree/ci-ios-results/screenshots) and [Appium log](https://github.com/taona89/wdio-mobile-api-demo/blob/ci-ios-results/logs/wdio-appium.log)         |
+| API, against the public Restful Booker, 15 Oct 2026                   | 22 pass, 16 fail because the server answers `500` (see [API testing approach](#api-testing-approach)) | [Run log](docs/evidence/api-run.txt)                                                                                                                                                                                                                                                                                        |
 
 `npm run report` combines all three into one Allure report; see [Reports](#reports).
 
 ## Test coverage
 
-| Area                             | Covered by                                            | What it checks                                                                                                                                          |
-| -------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Sign-up                          | `mobile/features/signup.feature`                      | Creating an account, and that the form rejects a confirmation password that does not match                                                              |
-| Login, valid credentials         | `login.feature` › Logging in with valid credentials   | The success alert, with its exact title and message                                                                                                     |
-| Login, invalid credentials       | `login.feature` › `@validation` outline               | A too-short password and a malformed email are rejected with no success alert; see [Invalid login](#invalid-login-on-an-app-with-no-backend)            |
-| Finding: no credential check     | `login.feature` › `@finding`                          | A characterisation scenario that records a real defect: any well-formed password logs in                                                                |
-| Form interaction                 | `mobile/features/forms.feature`                       | Input echo, switch toggle, active and inactive buttons                                                                                                  |
-| Swipe / scroll                   | `mobile/features/swipe.feature`                       | Horizontal carousel paging, and a vertical scroll to hidden content                                                                                     |
-| Both platforms, one set of tests | `wdio.android.conf.ts`, `wdio.ios.conf.ts`, `ios.yml` | The same 12 scenarios pass on an Android phone and an iOS simulator                                                                                     |
-| API: authentication              | `api/tests/auth.spec.ts`                              | A token is returned for valid credentials, it authorises a protected operation, and a missing or made-up token does not                                 |
-| API: create booking              | `api/tests/booking.spec.ts`                           | The response equals the request for three payload variants, plus a read-back, content negotiation, and 14 invalid payloads (see "API testing approach") |
+| Area                             | Covered by                                                           | What it checks                                                                                                                                          |
+| -------------------------------- | -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-up                          | `mobile/features/signup.feature`                                     | Creating an account, and that the form rejects a confirmation password that does not match                                                              |
+| Login, valid credentials         | `login.feature` › Logging in with valid credentials                  | The success alert, with its exact title and message                                                                                                     |
+| Login, invalid credentials       | `login.feature` › `@validation` outline                              | A too-short password and a malformed email are rejected with no success alert; see [Invalid login](#invalid-login-on-an-app-with-no-backend)            |
+| Finding: no credential check     | `login.feature` › `@finding`                                         | A characterisation scenario that records a real defect: any well-formed password logs in                                                                |
+| Form interaction                 | `mobile/features/forms.feature`                                      | Input echo, switch toggle, active and inactive buttons                                                                                                  |
+| Swipe / scroll                   | `mobile/features/swipe.feature`                                      | Horizontal carousel paging, and a vertical scroll to hidden content                                                                                     |
+| Both platforms, one set of tests | `wdio.android.conf.ts`, `wdio.ios.conf.ts`, `android.yml`, `ios.yml` | The same 12 scenarios pass on an Android phone, an Android emulator and an iOS simulator                                                                |
+| API: authentication              | `api/tests/auth.spec.ts`                                             | A token is returned for valid credentials, it authorises a protected operation, and a missing or made-up token does not                                 |
+| API: create booking              | `api/tests/booking.spec.ts`                                          | The response equals the request for three payload variants, plus a read-back, content negotiation, and 14 invalid payloads (see "API testing approach") |
 
-12 scenarios, 44 steps, 21 step definitions - all passing on a physical Android device and on an iOS simulator.
+12 scenarios, 44 steps, 21 step definitions - all passing on a physical Android device, an Android emulator and an iOS simulator.
 
 ### Verification status
 
-The whole suite has been run end to end on a physical Android device (Samsung, Android 1440x2707, Node 22.23.2, Appium 3, build-tools 37.0.0), and on an iOS simulator (iPhone 16e, iOS 18.5) on a GitHub Actions macOS runner, because there is no Mac among the development machines.
+The whole suite has been run end to end on a physical Android device (Samsung, Android 1440x2707, Node 22.23.2, Appium 3, build-tools 37.0.0), on an Android emulator (Pixel 6, Android 15) on a GitHub Actions Linux runner, and on an iOS simulator (iPhone 16e, iOS 18.5) on a GitHub Actions macOS runner, because there is no Mac among the development machines.
 
 | Check                                                 | How                                                                        | Result                                                                                                                                       |
 | ----------------------------------------------------- | -------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Mobile suite on a real device**                     | `npm run test:android`                                                     | **4 features, 12 scenarios, all passing**                                                                                                    |
+| **Mobile suite on an Android emulator**               | `npm run test:android`, run by `.github/workflows/android.yml`             | **4 features, 12 scenarios, all passing**                                                                                                    |
 | **Mobile suite on an iOS simulator**                  | `npm run test:ios`, run by `.github/workflows/ios.yml`                     | **4 features, 12 scenarios, all passing**                                                                                                    |
 | **API suite**                                         | `npm run test:api`                                                         | **38 tests: 22 pass, 16 fail.** The 22 are 8 checks and 14 known defects; the 16 are the API crashing with `500`, see "API testing approach" |
 | Evidence capture                                      | Same run                                                                   | 12 `PASS__` screenshots, 0 failures                                                                                                          |
@@ -151,7 +156,7 @@ sdkmanager --sdk_root="$ANDROID_HOME" "platform-tools" "build-tools;37.0.0"
 
 On a JDK whose version string is a bare major ("18", say) `sdkmanager` can misparse its own version check and refuse to start with "Java version 17 or higher is required" even though the JDK qualifies. `SKIP_JDK_VERSION_CHECK=1` gets past it.
 
-Appium and the UiAutomator2 driver are **project dependencies**: `npm ci` installs them, no global Appium needed. The iOS driver is not, so that `npm ci` stays light on Android-only machines — install it with `npx appium driver install xcuitest` when you need it.
+Appium and the UiAutomator2 driver are **project dependencies**: `npm ci` installs them, no global Appium needed. The iOS driver is not, so that `npm ci` stays light on Android-only machines — install it with `npm run driver:ios` when you need it. The script pins the driver's version, because the newest XCUITest driver needs Appium 4 (see [docs/LESSONS.md](docs/LESSONS.md)).
 
 The easiest way to get the SDK is Android Studio (SDK Manager → Android SDK Platform-Tools). Typical locations:
 
@@ -208,12 +213,21 @@ Tags available: `@mobile` on every feature, then `@login`, `@signup`, `@forms`, 
 For iOS, on macOS with Xcode:
 
 ```bash
-npx appium driver install xcuitest
+npm run driver:ios                # the XCUITest driver, at a version that runs on Appium 3
 npm run app:download:ios          # fetches the simulator .zip into ./apps
 npm run test:ios                  # override IOS_DEVICE_NAME / IOS_PLATFORM_VERSION in .env
 ```
 
-Turn off password AutoFill on the simulator first, or the sign-up scenarios fail (see [docs/LESSONS.md](docs/LESSONS.md)). Without a Mac, `.github/workflows/ios.yml` does all of the above on a GitHub Actions macOS runner: it runs on pushes to `main` that touch the mobile suite, and on demand. It uploads the run's evidence as the `ios-artifacts` artifact and also publishes it to the `ci-ios-results` branch, so the Allure results can be fetched with plain git and merged into the combined report below.
+Turn off password AutoFill on the simulator first, or the sign-up scenarios fail (see [docs/LESSONS.md](docs/LESSONS.md)). Without a Mac, the iOS workflow below does all of the above on a GitHub Actions macOS runner.
+
+### Continuous integration
+
+| Workflow                        | Runner   | Device                                                           |
+| ------------------------------- | -------- | ---------------------------------------------------------------- |
+| `.github/workflows/android.yml` | Ubuntu   | Android emulator: Pixel 6, Android 15 (API 35), plain AOSP image |
+| `.github/workflows/ios.yml`     | macOS 15 | iOS simulator: the newest iPhone the runner's Xcode can target   |
+
+Both run the same features, steps and page objects as a local run, on every push to any branch that touches the mobile suite, and on demand from the Actions tab, so a change is proven on both platforms before it reaches `main`. Each uploads its screenshots and logs as an artifact (`android-artifacts`, which also holds the emulator's logcat, and `ios-artifacts`). Runs on `main` also publish them to the `ci-android-results` and `ci-ios-results` branches, so they can be browsed on GitHub and the Allure results fetched with plain git. A run that fails before the suite starts publishes nothing, so the last evidence stays in place.
 
 ### Reports
 
@@ -225,7 +239,7 @@ npm run test:mobile:report    # mobile only
 npm run test:api:allure       # API only
 ```
 
-Each command builds the report from the results of the most recent runs and opens it; rendering needs Java. The combined report groups tests as `Mobile > Android > <feature>`, `Mobile > iOS > <feature>` and `API > <spec file>`. Each platform writes to its own directory (`mobile/artifacts/allure-results/android` and `.../ios`), so one platform's run never clears the other's results. To include a CI iOS run, copy `allure-results/ios` from the `ci-ios-results` branch into `mobile/artifacts/allure-results/ios`.
+Each command builds the report from the results of the most recent runs and opens it; rendering needs Java. The combined report groups tests as `Mobile > Android > <feature>`, `Mobile > iOS > <feature>` and `API > <spec file>`. Each platform writes to its own directory (`mobile/artifacts/allure-results/android` and `.../ios`), so one platform's run never clears the other's results. To include a CI iOS run, copy `allure-results/ios` from the `ci-ios-results` branch into `mobile/artifacts/allure-results/ios`. A CI Android run, from `ci-android-results`, goes into `.../android` the same way, in place of a phone run.
 
 A mobile scenario reads as its Gherkin steps, with the end-state screenshot attached. An API test reads as named steps too, such as `POST /booking`, `The response is 200 with a JSON body` and `The stored booking equals the request`. Every request step carries what was sent and what came back (status, content type and body) as `Request` and `Response` attachments, with passwords and tokens masked. Playwright's own steps (hooks, fixtures, bare `expect` calls) are left out of the Allure report; they are still in the Playwright HTML report.
 
@@ -301,7 +315,8 @@ api/
   tests/           auth.spec.ts, booking.spec.ts
 scripts/           download-app.mjs  (android | ios)
 docs/              LESSONS.md (what the runs taught us), evidence/ (screenshots and run logs)
-.github/workflows/ ios.yml  (the iOS suite on a macOS runner)
+.github/workflows/ android.yml  (the Android suite on an emulator, Linux runner)
+                   ios.yml      (the iOS suite on a simulator, macOS runner)
 ```
 
 ## Design decisions
