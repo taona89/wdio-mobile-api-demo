@@ -1,5 +1,5 @@
 {
-    "name": "wdio-appium-api-assessment",
+    "name": "wdio-mobile-api-demo",
     "version": "1.0.0",
     "private": true,
     "description": "Mobile automation (WebdriverIO + Appium) for the WebdriverIO Native Demo App and API tests (Playwright) for Restful Booker.",

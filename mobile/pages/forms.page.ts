@@ -12,7 +12,7 @@ export type FormButton = 'Active' | 'Inactive';
  * The dropdown (`~Dropdown`) is deliberately left out: RNPickerSelect is configured with
  * `useNativeAndroidPickerStyle={false}`, so Android renders a modal list while iOS renders a
  * picker wheel with a Done button. Driving both needs two genuinely different interactions and
- * there is no iOS device here to verify the second against. See README, "Requirement coverage".
+ * there is no iOS device here to verify the second against. See README, "Design decisions".
  *
  * The two elements scenarios assert on are exposed as getters rather than wrapped in methods
  * returning strings, so steps can use expect-webdriverio's retrying matchers (`toHaveText`)

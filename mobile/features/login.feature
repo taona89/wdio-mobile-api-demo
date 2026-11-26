@@ -14,7 +14,7 @@ Feature: Login
 
   # The app has no backend. LoginForm.tsx checks only that the email matches its regex and that
   # the password is at least 8 characters, so these are the only inputs it is able to reject.
-  # See README, "Requirement coverage", for why that is reported rather than worked around.
+  # See README, "Invalid login on an app with no backend", for why that is reported rather than worked around.
   @validation
   Scenario Outline: The form rejects <case>
     When I log in with email "<email>" and password "<password>"

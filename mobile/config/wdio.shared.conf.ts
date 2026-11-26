@@ -208,7 +208,7 @@ export const config: Omit<WebdriverIO.Config, 'capabilities'> = {
     },
 
     /**
-     * Evidence for the submission: a screenshot of every scenario's end state, prefixed by result.
+     * Run evidence: a screenshot of every scenario's end state, prefixed by result.
      * The failure branch also covers a scenario that died in the Before hook, where no step ran
      * and afterStep therefore never fired.
      */

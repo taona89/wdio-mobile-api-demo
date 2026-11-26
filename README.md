@@ -33,19 +33,19 @@ The API suite needs only Node: `npm ci && npm run test:api`. With more than one 
 
 `npm run report` combines all three into one Allure report; see [Reports](#reports).
 
-## Requirement coverage
+## Test coverage
 
-| Brief requirement                         | Covered by                                                  | Status | Notes                                                                                                          |
-| ----------------------------------------- | ----------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------- |
-| 1. Signup                                 | `mobile/features/signup.feature`                            | Done   | Plus a negative case: confirmation password does not match                                                     |
-| 2. Login, happy path                      | `login.feature` › Logging in with valid credentials         | Done   |                                                                                                                |
-| 3. Login, invalid credentials             | `login.feature` › Scenario Outline                          | Done   | **Deviation, see below**                                                                                       |
-| 4. Form interaction                       | `mobile/features/forms.feature`                             | Done   | Input echo, switch toggle, active and inactive buttons                                                         |
-| 5. Swipe / scroll                         | `mobile/features/swipe.feature`                             | Done   | Horizontal carousel paging, and a vertical scroll to hidden content                                            |
-| 6. Bonus scenario                         | `login.feature` › `@finding`, and the `@validation` outline | Done   | A characterisation scenario that records a real finding                                                        |
-| Bonus: both platforms, shared test logic  | `wdio.android.conf.ts`, `wdio.ios.conf.ts`, `ios.yml`       | Done   | The same 12 scenarios pass on an Android phone and an iOS simulator                                            |
-| API 1. Auth: token returned               | `api/tests/auth.spec.ts`                                    | Done   | Also proves the token authorises, and that a missing or made-up token does not                                 |
-| API 2. Create booking: response = request | `api/tests/booking.spec.ts`                                 | Done   | Three payload variants, a read-back, content negotiation, and 14 invalid payloads (see "API testing approach") |
+| Area                             | Covered by                                            | What it checks                                                                                                                                          |
+| -------------------------------- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Sign-up                          | `mobile/features/signup.feature`                      | Creating an account, and that the form rejects a confirmation password that does not match                                                              |
+| Login, valid credentials         | `login.feature` › Logging in with valid credentials   | The success alert, with its exact title and message                                                                                                     |
+| Login, invalid credentials       | `login.feature` › `@validation` outline               | A too-short password and a malformed email are rejected with no success alert; see [Invalid login](#invalid-login-on-an-app-with-no-backend)            |
+| Finding: no credential check     | `login.feature` › `@finding`                          | A characterisation scenario that records a real defect: any well-formed password logs in                                                                |
+| Form interaction                 | `mobile/features/forms.feature`                       | Input echo, switch toggle, active and inactive buttons                                                                                                  |
+| Swipe / scroll                   | `mobile/features/swipe.feature`                       | Horizontal carousel paging, and a vertical scroll to hidden content                                                                                     |
+| Both platforms, one set of tests | `wdio.android.conf.ts`, `wdio.ios.conf.ts`, `ios.yml` | The same 12 scenarios pass on an Android phone and an iOS simulator                                                                                     |
+| API: authentication              | `api/tests/auth.spec.ts`                              | A token is returned for valid credentials, it authorises a protected operation, and a missing or made-up token does not                                 |
+| API: create booking              | `api/tests/booking.spec.ts`                           | The response equals the request for three payload variants, plus a read-back, content negotiation, and 14 invalid payloads (see "API testing approach") |
 
 12 scenarios, 44 steps, 21 step definitions - all passing on a physical Android device and on an iOS simulator.
 
@@ -75,13 +75,13 @@ Still **not** verified:
 
 Every locator in the suite was taken from the app's source at tag `v2.2.0` rather than guessed: `src/config/TestProperties.ts`, `src/components/Button.tsx`, `src/components/LoginForm.tsx`, `src/components/FormComponents.tsx`, `src/components/SliderEntry.tsx`, `src/screens/Swipe.tsx`, `src/components/CustomBottomTabBar.tsx` and `app/(tabs)/_layout.tsx`.
 
-### Deviation: "wrong password" on an app with no backend
+### Invalid login on an app with no backend
 
 The demo app has no server. `src/components/LoginForm.tsx` only checks that the email is well formed and the password has at least 8 characters; anything that passes gets the success alert. So the app cannot know a password is "wrong" unless it breaks that rule. The suite therefore:
 
 - **rejects a wrong password** one character below the minimum, asserting the exact error "Please enter at least 8 characters" and that no success alert follows;
 - **rejects a malformed email**, asserting its error message;
-- **records a finding** in the `@finding` scenario: a well-formed but wrong 8-character password logs in. This characterisation scenario passes today and would fail the moment real credential checking is added. In a team setting this goes to the product owner; against a real backend, the same scenario would assert a 401-driven error instead.
+- **records a finding** in the `@finding` scenario: a well-formed but wrong 8-character password logs in. This characterisation scenario passes today and would fail the moment real credential checking is added. It is a finding for the product owner; against a real backend, the same scenario would assert a 401-driven error instead.
 
 ## How the BDD layer is organised
 
@@ -213,7 +213,7 @@ npm run app:download:ios          # fetches the simulator .zip into ./apps
 npm run test:ios                  # override IOS_DEVICE_NAME / IOS_PLATFORM_VERSION in .env
 ```
 
-Turn off password AutoFill on the simulator first, or the sign-up scenarios fail (see [docs/LESSONS.md](docs/LESSONS.md)). Without a Mac, `.github/workflows/ios.yml` does all of the above on a GitHub Actions macOS runner: it runs on pushes to `main` or `ios-ci` that touch the mobile suite, and on demand. It uploads the run's evidence as the `ios-artifacts` artifact and also publishes it to the `ci-ios-results` branch, so the Allure results can be fetched with plain git and merged into the combined report below.
+Turn off password AutoFill on the simulator first, or the sign-up scenarios fail (see [docs/LESSONS.md](docs/LESSONS.md)). Without a Mac, `.github/workflows/ios.yml` does all of the above on a GitHub Actions macOS runner: it runs on pushes to `main` that touch the mobile suite, and on demand. It uploads the run's evidence as the `ios-artifacts` artifact and also publishes it to the `ci-ios-results` branch, so the Allure results can be fetched with plain git and merged into the combined report below.
 
 ### Reports
 
@@ -338,7 +338,7 @@ Each of these was observed against the public host. Those a test covers are decl
 - A booking missing any required field, or with a number as its firstname, crashes the server: `500 Internal Server Error` (a `400` would be expected). Nothing is stored.
 - Values are not validated. An empty firstname, a non-numeric price (stored as `null`), a negative price, `depositpaid: "no"` (stored as `true`), checkout before checkin, and a date that does not exist (stored as `"0NaN-aN-aN"`) are all accepted with `200` and stored.
 - The server matches `Accept` exactly and returns `418` for values it does not support, but `POST /booking` stores the booking anyway, so a client that retries after the 418 creates a duplicate.
-- `Accept: application/xml` returns an XML body labelled `Content-Type: text/html`. Observed, not tested: XML is outside the brief.
+- `Accept: application/xml` returns an XML body labelled `Content-Type: text/html`. Observed, not tested: XML responses are out of scope.
 - Unknown fields in a booking are dropped silently.
 - Errors are plain-text reason phrases, never JSON.
 - A successful `DELETE` returns `201`; deleting a booking that doesn't exist returns `405`.

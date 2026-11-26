@@ -5,7 +5,7 @@ name: iOS mobile tests
 on:
     workflow_dispatch:
     push:
-        branches: [main, ios-ci]
+        branches: [main]
         # A run takes about twenty minutes of macOS runner, so skip pushes that cannot affect it.
         paths:
             - mobile/**
